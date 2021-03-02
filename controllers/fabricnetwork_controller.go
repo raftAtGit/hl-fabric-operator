@@ -111,6 +111,19 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 			// reconsile until ready
 			return ctrl.Result{Requeue: true}, nil
 		}
+	case v1alpha1.StateHelmChartReady:
+		wfManifest, err := r.renderChannelFlow(ctx, network)
+		if err != nil {
+			r.Log.Error(err, "Rendering channel-flow failed")
+			return ctrl.Result{}, err
+		}
+		wfs, err := r.unmarshalWorkflows([]byte(wfManifest), true)
+		if err != nil {
+			r.Log.Error(err, "Unmarshaling workflow failed")
+			return ctrl.Result{}, err
+		}
+		r.Log.Info("unmarshaled workflows", "length", len(wfs), "kind", wfs[0].GetObjectKind())
+
 	}
 
 	return ctrl.Result{Requeue: false}, nil

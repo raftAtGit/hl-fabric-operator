@@ -21,7 +21,8 @@ import (
 	"github.com/raftAtGit/hl-fabric-operator/api/v1alpha1"
 )
 
-type HelmValues struct {
+// Struct to write the values passed to Helm chart to a file
+type helmValues struct {
 	HostAliases []corev1.HostAlias `json:"hostAliases,omitempty"`
 }
 
@@ -47,7 +48,7 @@ func (r *FabricNetworkReconciler) installHelmChart(ctx context.Context, network 
 	}
 
 	extraValues := []string{}
-	if network.Spec.Topology.TlsEnabled {
+	if network.Spec.Topology.UseActualDomains {
 		extraValues = []string{
 			"peer.launchPods=false",
 			"orderer.launchPods=false",
@@ -113,6 +114,57 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 
 	return nil
 
+}
+func (r *FabricNetworkReconciler) renderChannelFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
+	// TODO
+	chartDir := "/home/raft/c/raft_code/PIVT/fabric-kube/channel-flow/"
+	return r.renderHelmChart(ctx, network, chartDir)
+}
+
+func (r *FabricNetworkReconciler) renderHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork, chartDir string) (string, error) {
+	// TODO mutex this.
+	// os.Setenv("HELM_NAMESPACE", network.Namespace)
+	settings := cli.New()
+	actionConfig := new(action.Configuration)
+
+	// if err := actionConfig.Init(settings.RESTClientGetter(), network.Namespace, "secret", log.Printf); err != nil {
+	// 	r.Log.Error(err, "Couldnt init")
+	// 	return err
+	// }
+
+	chart, err := loader.Load(chartDir)
+	if err != nil {
+		return "", err
+	}
+
+	if err := r.createValuesFiles(ctx, network); err != nil {
+		r.Log.Error(err, "Couldnt create values files")
+		return "", err
+	}
+
+	extraValues := []string{}
+	values, err := r.getChartValues(network, settings, extraValues...)
+	if err != nil {
+		return "", err
+	}
+
+	client := action.NewInstall(actionConfig)
+	client.DryRun = true
+	client.ReleaseName = "doesnt-matter"
+	client.Namespace = network.Namespace
+	client.Replace = true // Skip the name check
+	client.ClientOnly = true
+	// client.APIVersions = chartutil.VersionSet(extraAPIs)
+	client.IncludeCRDs = false
+
+	r.Log.Info("Rendering Helm chart", "path", chartDir)
+	release, err := client.Run(chart, values)
+	if err != nil {
+		return "", err
+	}
+	r.Log.Info("Rendered Helm chart", "path", chartDir)
+
+	return release.Manifest, nil
 }
 
 func (r *FabricNetworkReconciler) isHelmChartReady(ctx context.Context, network *v1alpha1.FabricNetwork) (bool, error) {
@@ -224,7 +276,7 @@ func (r *FabricNetworkReconciler) createValuesFiles(ctx context.Context, network
 		return err
 	}
 
-	values := HelmValues{}
+	values := helmValues{}
 
 	values.HostAliases, err = r.getHostAliases(ctx, network)
 	if err != nil {
