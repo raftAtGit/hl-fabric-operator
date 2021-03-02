@@ -1,0 +1,90 @@
+apiVersion: hyperledger.org/v1alpha1
+kind: FabricNetwork
+metadata:
+  name: fabricnetwork-sample-2
+spec:
+  # topology of the Fabric network managed by Fabric Operator
+  # also contains some top level properties which is applied to whole network
+  topology:
+    # Hyperledger Fabric Version
+    version: 1.4.4  
+    # TLS enabled?
+    tlsEnabled: true
+    # use actual domain names like peer0.atlantis.com instead of internal service names
+    useActualDomains: true
+
+    # Orderer and Peer organizations topology
+    # crypto-config.yaml will be derived from this part
+    ordererOrgs:
+      - name: Pivt
+        domain: pivt.nl
+        hosts:
+          - orderer0
+          - orderer1
+    peerOrgs:
+      - name: Karga
+        domain: aptalkarga.tr
+        peerCount: 2
+      - name: Nevergreen
+        domain: nevergreen.nl
+        peerCount: 2
+      - name: Atlantis
+        domain: atlantis.com
+        peerCount: 1
+
+  network:
+    # used by init script to create genesis block and by peer-org-flow to parse consortiums
+    genesisProfile: OrdererGenesis
+    # used by init script to create genesis block 
+    systemChannelID: testchainid
+
+    # defines which organizations will join to which channels
+    channels:
+      - name: common
+        # all peers in these organizations will join the channel
+        orgs: [Karga, Nevergreen, Atlantis]
+      - name: private-karga-atlantis
+        # all peers in these organizations will join the channel
+        orgs: [Karga, Atlantis]
+
+    # defines which chaincodes will be installed to which organizations
+    chaincodes:
+      - name: very-simple
+        # if defined, this will override the global chaincode.version value
+        # version: # "2.0" 
+        # chaincode will be installed to all peers in these organizations
+        orgs: [Karga, Nevergreen, Atlantis]
+        # at which channels are we instantiating/upgrading chaincode?
+        channels:
+        - name: common
+          # chaincode will be instantiated/upgraded using the first peer in the first organization
+          # chaincode will be invoked on all peers in these organizations
+          orgs: [Karga, Nevergreen, Atlantis]
+          policy: OR('KargaMSP.member','NevergreenMSP.member','AtlantisMSP.member')
+          
+      - name: even-simpler
+        # if defined, this will override the global chaincode.language value
+        language: golang
+        orgs: [Karga, Atlantis]
+        channels:
+        - name: private-karga-atlantis
+          orgs: [Karga, Atlantis]
+          policy: OR('KargaMSP.member','AtlantisMSP.member')
+
+
+  # additional settings passed to relevant Helm charts
+  # see each chart's values.yaml file for details
+  # in this part some validation or filtering is critical, to make sure no provided value
+  # conflicts with top level values. for example: tlsEnabled
+  # or with Fabric Operator created values for example: hlf-kube.chaincode.excludeAll or chaincode-flow.flow.chaincode.include
+  hlf-kube: 
+    peer:
+      docker:
+        dind: 
+          # use a side car docker in docker container?
+          enabled: false
+  channel-flow:
+  chaincode-flow:
+  peer-org-flow:
+  backup-flow:
+  restore-flow:

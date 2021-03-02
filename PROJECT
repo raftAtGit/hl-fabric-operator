@@ -1,0 +1,12 @@
+layout: go.kubebuilder.io/v3
+projectName: hl-fabric-operator
+repo: github.com/raftAtGit/hl-fabric-operator
+resources:
+- crdVersion: v1
+  group: hyperledger.org
+  kind: FabricNetwork
+  version: v1alpha1
+version: 3-alpha
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
