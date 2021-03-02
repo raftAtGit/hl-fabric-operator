@@ -168,25 +168,6 @@ func (r *FabricNetworkReconciler) renderHelmChart(ctx context.Context, network *
 }
 
 func (r *FabricNetworkReconciler) isHelmChartReady(ctx context.Context, network *v1alpha1.FabricNetwork) (bool, error) {
-	// TODO mutex this.
-	// os.Setenv("HELM_NAMESPACE", network.Namespace)
-	// settings := cli.New()
-	// actionConfig := new(action.Configuration)
-
-	// if err := actionConfig.Init(settings.RESTClientGetter(), network.Namespace, "secret", log.Printf); err != nil {
-	// 	r.Log.Error(err, "Couldnt init")
-	// 	return false, err
-	// }
-
-	// client := action.NewStatus(actionConfig)
-
-	// r.Log.Info("getting status of release")
-	// release, err := client.Run("hlf-kube")
-	// if err != nil {
-	// 	return false, err
-	// }
-	// r.Log.Info("got status of release", "name", release.Name, "version", release.Version, "namespace", network.Namespace, "status", release.Info.Status)
-
 	stsList := &appsv1.StatefulSetList{}
 	listOpts := []client.ListOption{
 		client.InNamespace(network.Namespace),
@@ -241,11 +222,11 @@ func (r *FabricNetworkReconciler) getChartValues(network *v1alpha1.FabricNetwork
 	valueOpts := &values.Options{}
 	valueOpts.ValueFiles = []string{
 		// TODO
-		// "/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-raft-tls/network.yaml",
-		// "/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-raft-tls/crypto-config.yaml",
+		"/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-raft-tls/network.yaml",
+		"/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-raft-tls/crypto-config.yaml",
 
-		"/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-kafka/network.yaml",
-		"/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-kafka/crypto-config.yaml",
+		// "/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-kafka/network.yaml",
+		// "/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-kafka/crypto-config.yaml",
 
 		getChartDir(network) + "user-values.yaml",
 		getChartDir(network) + "operator-values.yaml",
@@ -312,7 +293,7 @@ func (r *FabricNetworkReconciler) getHostAliases(ctx context.Context, network *v
 			r.Log.Error(err, "Failed to get ServiceList")
 			return nil, err
 		}
-		r.Log.Info("got ServiceList", "size", len(svcList.Items))
+		r.Log.Info("Got ServiceList", "size", len(svcList.Items))
 
 		hostAliases := make([]corev1.HostAlias, len(svcList.Items))
 		for i, svc := range svcList.Items {
@@ -321,7 +302,7 @@ func (r *FabricNetworkReconciler) getHostAliases(ctx context.Context, network *v
 				Hostnames: []string{svc.Labels["fqdn"]},
 			}
 		}
-		r.Log.Info("created hostAliases", "items", hostAliases)
+		r.Log.Info("Created hostAliases", "items", hostAliases)
 
 		allHostAliases = append(allHostAliases, hostAliases...)
 	}

@@ -43,9 +43,10 @@ type FabricNetworkSpec struct {
 
 // FabricNetworkStatus defines the observed state of FabricNetwork
 type FabricNetworkStatus struct {
-	State   State  `json:"state,omitempty"`
-	Reason  string `json:"reason,omitempty"`
-	Message string `json:"message,omitempty"`
+	State    State  `json:"state,omitempty"`
+	Reason   string `json:"reason,omitempty"`
+	Message  string `json:"message,omitempty"`
+	Workflow string `json:"workflow,omitempty"`
 }
 
 type State string
@@ -55,8 +56,11 @@ const (
 	StateHelmChartInstalled   State = "HelmChartInstalled"
 	StateHelmChartNeedsUpdate State = "HelmChartNeedsUpdate"
 	StateHelmChartReady       State = "HelmChartReady"
+	StateChannelFlowSubmitted State = "ChannelFlowSubmitted"
+	StateChannelFlowCompleted State = "ChannelFlowCompleted"
 	StateRejected             State = "Rejected"
 	StateInvalid              State = "Invalid"
+	StateFailed               State = "Failed"
 )
 
 // +kubebuilder:object:root=true

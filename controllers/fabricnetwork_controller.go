@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -66,7 +65,7 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 
 	r.Log.Info("Got the FabricNetwork", "network", network.Spec, "state", network.Status.State)
-	fmt.Printf("hlf-kube %T, %v \n", network.Spec.HlfKube, network.Spec.HlfKube.Object)
+	// fmt.Printf("hlf-kube %T, %v \n", network.Spec.HlfKube, network.Spec.HlfKube.Object)
 
 	switch network.Status.State {
 	case "":
@@ -108,22 +107,35 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		if ready {
 			r.setState(ctx, network, v1alpha1.StateHelmChartReady, "", "")
 		} else {
-			// reconsile until ready
+			// reconcile until ready
 			return ctrl.Result{Requeue: true}, nil
 		}
 	case v1alpha1.StateHelmChartReady:
-		wfManifest, err := r.renderChannelFlow(ctx, network)
+		wfName, err := r.startChannelFlow(ctx, network)
 		if err != nil {
-			r.Log.Error(err, "Rendering channel-flow failed")
+			r.Log.Error(err, "Starting channel-flow failed")
 			return ctrl.Result{}, err
 		}
-		wfs, err := r.unmarshalWorkflows([]byte(wfManifest), true)
+		r.Log.Info("Started channel-flow", "name", wfName)
+		network.Status.Workflow = wfName
+		r.setState(ctx, network, v1alpha1.StateChannelFlowSubmitted, "", "")
+	case v1alpha1.StateChannelFlowSubmitted:
+		status, err := r.getWorkflowStatus(ctx, network, network.Status.Workflow)
 		if err != nil {
-			r.Log.Error(err, "Unmarshaling workflow failed")
+			r.Log.Error(err, "Failed to get workflow status")
 			return ctrl.Result{}, err
 		}
-		r.Log.Info("unmarshaled workflows", "length", len(wfs), "kind", wfs[0].GetObjectKind())
-
+		r.Log.Info("Got workflow status", "status", status)
+		switch status {
+		case wfCompleted:
+			r.setState(ctx, network, v1alpha1.StateChannelFlowCompleted, "", "")
+		case wfFailed:
+			r.setState(ctx, network, v1alpha1.StateFailed, "ChannelFlowFailed", "Channel flow failed")
+			return ctrl.Result{Requeue: false}, nil
+		case wfSubmitted:
+			// reconcile until completed or failed
+			return ctrl.Result{Requeue: true}, nil
+		}
 	}
 
 	return ctrl.Result{Requeue: false}, nil
@@ -146,7 +158,7 @@ func (r *FabricNetworkReconciler) checkOthersInNamespace(ctx context.Context, ne
 		r.Log.Error(err, "Failed to get FabricNetworkList")
 		return false, err
 	}
-	r.Log.Info("got FabricNetworkList", "size", len(networkList.Items))
+	r.Log.Info("Got FabricNetworkList", "size", len(networkList.Items))
 
 	if len(networkList.Items) == 1 {
 		return false, nil
@@ -186,7 +198,7 @@ func (r *FabricNetworkReconciler) setState(ctx context.Context, network *v1alpha
 	network.Status.Message = message
 
 	if err := r.Status().Update(ctx, network); err != nil {
-		r.Log.Error(err, "unable to update FabricNetwork status")
+		r.Log.Error(err, "Unable to update FabricNetwork status")
 		return err
 	}
 	return nil
