@@ -40,6 +40,15 @@ type FabricNetworkReconciler struct {
 // +kubebuilder:rbac:groups=hyperledger.org,resources=fabricnetworks/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=hyperledger.org,resources=fabricnetworks/finalizers,verbs=update
 
+// SetupWithManager sets up the controller with the Manager.
+func (r *FabricNetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Log.Info("SetupWithManager", "settings", settings)
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.FabricNetwork{}).
+		Complete(r)
+}
+
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 //
@@ -81,6 +90,10 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	case v1alpha1.StateNew:
 		if err := r.validate(ctx, network); err != nil {
 			r.Log.Error(err, "Validation failed")
+			return ctrl.Result{}, err
+		}
+		if err := r.prepareHelmChart(ctx, network); err != nil {
+			r.Log.Error(err, "Preparing Helm chart failed")
 			return ctrl.Result{}, err
 		}
 		if err := r.installHelmChart(ctx, network); err != nil {
@@ -170,13 +183,6 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 
 	return ctrl.Result{Requeue: false}, nil
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *FabricNetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.FabricNetwork{}).
-		Complete(r)
 }
 
 func (r *FabricNetworkReconciler) checkOthersInNamespace(ctx context.Context, network *v1alpha1.FabricNetwork) (bool, error) {

@@ -4,9 +4,21 @@ metadata:
   name: scaled-raft-tls
 spec:
 
+  # source of the configtx.yaml file. either a Kubernetes Secret or a file.
+  configtx:
+    # file: # see CLI for usage
+    secret: hlf-configtx.yaml
+
+  # source of the genesis block. either a Kubernetes Secret or a file.
+  # if none provided Fabric Operator will create the genesis block
+  genesis: {}
+    # file: # see CLI for usage
+    # secret: hlf-genesis.block
+
   hostAliases: 
   - ip: 10.0.240.0
-    hostnames: [siksok.nl]    
+    hostnames: [siksok.nl]
+
   # topology of the Fabric network managed by Fabric Operator
   # also contains some top level properties which is applied to whole network
   topology:

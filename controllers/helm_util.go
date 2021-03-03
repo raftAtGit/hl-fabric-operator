@@ -15,6 +15,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -24,6 +25,55 @@ import (
 // Struct to write the values passed to Helm chart to a file
 type helmValues struct {
 	HostAliases []corev1.HostAlias `json:"hostAliases,omitempty"`
+}
+
+// Struct to write the Network to a file
+type networkContainer struct {
+	Network v1alpha1.Network `json:"network,omitempty"`
+}
+
+func (r *FabricNetworkReconciler) prepareHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork) error {
+	networkDir := getNetworkDir(network)
+
+	if err := os.RemoveAll(networkDir); err != nil {
+		r.Log.Error(err, "Network dir alredy exists and couldnt delete", "networkDir", networkDir)
+		return err
+	}
+
+	if err := copyDir(settings.PivtDir+"/fabric-kube/hlf-kube", networkDir); err != nil {
+		r.Log.Error(err, "Couldnt copy hlf-kube folder to network dir", "networkDir", networkDir)
+		return err
+	}
+
+	netContainer := networkContainer{Network: network.Spec.Network}
+	file := networkDir + "/network.yaml"
+	if err := writeYamlToFile(netContainer, file); err != nil {
+		return err
+	}
+	r.Log.Info("Wrote network to file", "file", file, "network", netContainer)
+
+	if err := os.MkdirAll(networkDir+"/channel-artifacts", 0755); err != nil {
+		return err
+	}
+
+	secret := &corev1.Secret{}
+	if err := r.Get(ctx, types.NamespacedName{Name: network.Spec.Configtx.Secret, Namespace: network.Namespace}, secret); err != nil {
+		r.Log.Error(err, "Couldnt get configtx secret", "configtx", network.Spec.Configtx.Secret)
+		return err
+	}
+	configtxFile := networkDir + "/configtx.yaml"
+	if err := ioutil.WriteFile(configtxFile, secret.Data["configtx.yaml"], 0644); err != nil {
+		r.Log.Error(err, "Couldnt write configtx to file")
+		return err
+	}
+	r.Log.Info("Wrote configtx to file", "file", configtxFile)
+
+	if err := r.prepareChartDirForFabric(ctx, network); err != nil {
+		r.Log.Error(err, "Prepare chart dir failed")
+		return err
+	}
+
+	return nil
 }
 
 func (r *FabricNetworkReconciler) installHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork) error {
@@ -37,7 +87,7 @@ func (r *FabricNetworkReconciler) installHelmChart(ctx context.Context, network 
 		return err
 	}
 
-	chart, err := loader.Load(getChartDir(network))
+	chart, err := loader.Load(getNetworkDir(network))
 	if err != nil {
 		return err
 	}
@@ -85,7 +135,7 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 		return err
 	}
 
-	chart, err := loader.Load(getChartDir(network))
+	chart, err := loader.Load(getNetworkDir(network))
 	if err != nil {
 		return err
 	}
@@ -211,29 +261,36 @@ func (r *FabricNetworkReconciler) isHelmChartReady(ctx context.Context, network 
 	return true, nil
 }
 
-func getChartDir(network *v1alpha1.FabricNetwork) string {
-	// TODO
-	return "/home/raft/c/raft_code/PIVT/fabric-kube/hlf-kube/"
+func getNetworkDir(network *v1alpha1.FabricNetwork) string {
+	return settings.NetworkDir + "/" + network.Namespace + "/" + network.Name
 }
+
+// func getChartDir(network *v1alpha1.FabricNetwork) string {
+// 	return getNetworkDir(network) + "hlf-kube"
+// }
 
 func (r *FabricNetworkReconciler) getChartValues(network *v1alpha1.FabricNetwork, settings *cli.EnvSettings, valuesFile string, extraValues ...string) (map[string]interface{}, error) {
 	valueOpts := &values.Options{}
 	valueOpts.ValueFiles = []string{
 		// TODO
-		"/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-raft-tls/network.yaml",
-		"/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-raft-tls/crypto-config.yaml",
+		getNetworkDir(network) + "/network.yaml",
+		getNetworkDir(network) + "/crypto-config.yaml",
 
-		// "/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-kafka/network.yaml",
-		// "/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-kafka/crypto-config.yaml",
-
-		getChartDir(network) + valuesFile,
-		getChartDir(network) + "operator-values.yaml",
+		getNetworkDir(network) + "/" + valuesFile,
+		getNetworkDir(network) + "/operator-values.yaml",
+	}
+	genesisProvided := false
+	if network.Spec.Genesis.Secret != "" {
+		genesisProvided = true
 	}
 	valueOpts.Values = append([]string{
 		// TODO
 		"hyperledgerVersion=" + network.Spec.Topology.Version,
-		"tlsEnabled=" + strconv.FormatBool(network.Spec.Topology.TlsEnabled),
+		"tlsEnabled=" + strconv.FormatBool(network.Spec.Topology.TLSEnabled),
 		"useActualDomains=" + strconv.FormatBool(network.Spec.Topology.UseActualDomains),
+		"configMap.chaincode=false",
+		"secret.configtx=false",
+		"secret.genesis=" + strconv.FormatBool(!genesisProvided),
 	}, extraValues...)
 	r.Log.Info("Values", "valueOpts", valueOpts)
 
@@ -245,15 +302,15 @@ func (r *FabricNetworkReconciler) getChartValues(network *v1alpha1.FabricNetwork
 }
 
 func (r *FabricNetworkReconciler) createValuesFiles(ctx context.Context, network *v1alpha1.FabricNetwork) error {
-	chartDir := getChartDir(network)
+	networkDir := getNetworkDir(network)
 
-	if err := createValuesFile(network.Spec.HlfKube.Raw, chartDir+"hlf-kube-values.yaml"); err != nil {
+	if err := r.createValuesFile(network.Spec.HlfKube.Raw, networkDir+"/hlf-kube-values.yaml"); err != nil {
 		return err
 	}
-	if err := createValuesFile(network.Spec.ChannelFlow.Raw, chartDir+"channel-flow-values.yaml"); err != nil {
+	if err := r.createValuesFile(network.Spec.ChannelFlow.Raw, networkDir+"/channel-flow-values.yaml"); err != nil {
 		return err
 	}
-	if err := createValuesFile(network.Spec.ChaincodeFlow.Raw, chartDir+"chaincode-flow-values.yaml"); err != nil {
+	if err := r.createValuesFile(network.Spec.ChaincodeFlow.Raw, networkDir+"/chaincode-flow-values.yaml"); err != nil {
 		return err
 	}
 
@@ -266,28 +323,25 @@ func (r *FabricNetworkReconciler) createValuesFiles(ctx context.Context, network
 		HostAliases: hostAliases,
 	}
 
-	yml, err := yaml.Marshal(values)
-	if err != nil {
+	file := networkDir + "/operator-values.yaml"
+	if err := writeYamlToFile(values, file); err != nil {
 		return err
 	}
-
-	hostAliasesFile := chartDir + "operator-values.yaml"
-	if err := ioutil.WriteFile(hostAliasesFile, yml, 0644); err != nil {
-		return err
-	}
+	r.Log.Info("Wrote values to file", "values", values, "file", file)
 
 	return nil
 }
 
-func createValuesFile(contents []byte, fileName string) error {
+func (r *FabricNetworkReconciler) createValuesFile(contents []byte, file string) error {
 	yml, err := yaml.JSONToYAML(contents)
 	if err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(fileName, yml, 0644); err != nil {
+	if err := ioutil.WriteFile(file, yml, 0644); err != nil {
 		return err
 	}
+	r.Log.Info("Wrote values to file", "values", string(contents), "file", file)
 
 	return nil
 }

@@ -113,6 +113,10 @@ spec:
                               policy:
                                 description: Chaincode policy
                                 type: string
+                            required:
+                            - name
+                            - orgs
+                            - policy
                             type: object
                           type: array
                         language:
@@ -134,6 +138,8 @@ spec:
                           type: string
                       required:
                       - channels
+                      - name
+                      - orgs
                       type: object
                     type: array
                   channels:
@@ -147,6 +153,9 @@ spec:
                           items:
                             type: string
                           type: array
+                      required:
+                      - name
+                      - orgs
                       type: object
                     type: array
                   genesisProfile:
@@ -178,6 +187,10 @@ spec:
                         name:
                           description: Name of organization
                           type: string
+                      required:
+                      - domain
+                      - hosts
+                      - name
                       type: object
                     type: array
                   peerOrgs:
@@ -195,6 +208,10 @@ spec:
                           description: number of peers
                           format: int32
                           type: integer
+                      required:
+                      - domain
+                      - name
+                      - peerCount
                       type: object
                     type: array
                   tlsEnabled:
@@ -208,9 +225,10 @@ spec:
                     description: Hyperledger Fabric Version
                     type: string
                 required:
-                - ordererOrgs
-                - peerOrgs
+                - version
                 type: object
+            required:
+            - configtx
             type: object
           status:
             description: FabricNetworkStatus defines the observed state of FabricNetwork

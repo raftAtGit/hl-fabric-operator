@@ -26,7 +26,7 @@ import (
 
 // FabricNetworkSpec defines the desired state of FabricNetwork
 type FabricNetworkSpec struct {
-	Configtx Configtx `json:"configtx,omitempty"`
+	Configtx Configtx `json:"configtx"`
 	Genesis  Genesis  `json:"genesis,omitempty"`
 
 	// Adds additional DNS entries to /etc/hosts files of pods
@@ -115,36 +115,36 @@ type Genesis struct {
 type Topology struct {
 
 	// Hyperledger Fabric Version
-	Version string `json:"version,omitempty"`
+	Version string `json:"version"`
 	// TLS enabled?
-	TlsEnabled bool `json:"tlsEnabled,omitempty"`
+	TLSEnabled bool `json:"tlsEnabled,omitempty"`
 	// use actual domain names like peer0.atlantis.com instead of internal service names
 	UseActualDomains bool `json:"useActualDomains,omitempty"`
 
 	// Orderer organizations
-	OrdererOrg []OrdererOrg `json:"ordererOrgs"`
+	OrdererOrgs []OrdererOrg `json:"ordererOrgs,omitempty"`
 	// Peer organizations
-	PeerOrg []PeerOrg `json:"peerOrgs"`
+	PeerOrgs []PeerOrg `json:"peerOrgs,omitempty"`
 }
 
 // Orderer organization
 type OrdererOrg struct {
 	// Name of organization
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// Domain of organization
-	Domain string `json:"domain,omitempty"`
+	Domain string `json:"domain"`
 	// orderer hosts list, at least one is required
-	Hosts []string `json:"hosts,omitempty"`
+	Hosts []string `json:"hosts"`
 }
 
 // Peer organization
 type PeerOrg struct {
 	// Name of organization
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// Domain of organization
-	Domain string `json:"domain,omitempty"`
+	Domain string `json:"domain"`
 	// number of peers
-	PeerCount int32 `json:"peerCount,omitempty"`
+	PeerCount int32 `json:"peerCount"`
 }
 
 type Network struct {
@@ -157,20 +157,20 @@ type Network struct {
 
 type Channel struct {
 	// Name of channel
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// Peer organizations in the channel
-	Orgs []string `json:"orgs,omitempty"`
+	Orgs []string `json:"orgs"`
 }
 
 type Chaincode struct {
 	// Name of chaincode
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// Version of chaincode. If defined, this will override the global chaincode.version value
 	Version string `json:"version,omitempty"`
 	// Programming language of chaincode. If defined, this will override the global chaincode.language value
 	Language string `json:"language,omitempty"`
 	// Chaincode will be installed to all peers in these peer organizations
-	Orgs []string `json:"orgs,omitempty"`
+	Orgs []string `json:"orgs"`
 	// Channels are we instantiating/upgrading this chaincode
 	CcChannel []CcChannel `json:"channels"`
 }
@@ -178,12 +178,12 @@ type Chaincode struct {
 // Chaincode channel
 type CcChannel struct {
 	// Name of channel
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// Chaincode will be instantiated/upgraded using the first peer in the first organization.
 	// Chaincode will be invoked on all peers in these organizations.
-	Orgs []string `json:"orgs,omitempty"`
+	Orgs []string `json:"orgs"`
 	// Chaincode policy
-	Policy string `json:"policy,omitempty"`
+	Policy string `json:"policy"`
 }
 
 func init() {
