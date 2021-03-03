@@ -37,8 +37,15 @@ type FabricNetworkSpec struct {
 	Topology Topology `json:"topology,omitempty"`
 	Network  Network  `json:"network,omitempty"`
 
+	// Additional values passed to hlf-kube Helm chart
 	// +kubebuilder:pruning:PreserveUnknownFields
 	HlfKube runtime.RawExtension `json:"hlf-kube,omitempty"`
+	// Additional values passed to channel-flow
+	// +kubebuilder:pruning:PreserveUnknownFields
+	ChannelFlow runtime.RawExtension `json:"channel-flow,omitempty"`
+	// Additional values passed to chaincode-flow
+	// +kubebuilder:pruning:PreserveUnknownFields
+	ChaincodeFlow runtime.RawExtension `json:"chaincode-flow,omitempty"`
 }
 
 // FabricNetworkStatus defines the observed state of FabricNetwork
@@ -52,15 +59,18 @@ type FabricNetworkStatus struct {
 type State string
 
 const (
-	StateNew                  State = "New"
-	StateHelmChartInstalled   State = "HelmChartInstalled"
-	StateHelmChartNeedsUpdate State = "HelmChartNeedsUpdate"
-	StateHelmChartReady       State = "HelmChartReady"
-	StateChannelFlowSubmitted State = "ChannelFlowSubmitted"
-	StateChannelFlowCompleted State = "ChannelFlowCompleted"
-	StateRejected             State = "Rejected"
-	StateInvalid              State = "Invalid"
-	StateFailed               State = "Failed"
+	StateNew                    State = "New"
+	StateReady                  State = "Ready"
+	StateRejected               State = "Rejected"
+	StateInvalid                State = "Invalid"
+	StateFailed                 State = "Failed"
+	StateHelmChartInstalled     State = "HelmChartInstalled"
+	StateHelmChartNeedsUpdate   State = "HelmChartNeedsUpdate"
+	StateHelmChartReady         State = "HelmChartReady"
+	StateChannelFlowSubmitted   State = "ChannelFlowSubmitted"
+	StateChannelFlowCompleted   State = "ChannelFlowCompleted"
+	StateChaincodeFlowSubmitted State = "ChaincodeFlowSubmitted"
+	StateChaincodeFlowCompleted State = "ChaincodeFlowCompleted"
 )
 
 // +kubebuilder:object:root=true

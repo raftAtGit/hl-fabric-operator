@@ -87,8 +87,8 @@ spec:
         dind: 
           # use a side car docker in docker container? required for Kubernetes versions 1.19+ 
           enabled: true
-  channel-flow:
-  chaincode-flow:
-  peer-org-flow:
-  backup-flow:
-  restore-flow:
+  channel-flow: {}
+  chaincode-flow: {}
+  # peer-org-flow:
+  # backup-flow:
+  # restore-flow:

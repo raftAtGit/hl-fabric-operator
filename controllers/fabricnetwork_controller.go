@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -108,7 +109,7 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 			r.setState(ctx, network, v1alpha1.StateHelmChartReady, "", "")
 		} else {
 			// reconcile until ready
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 	case v1alpha1.StateHelmChartReady:
 		wfName, err := r.startChannelFlow(ctx, network)
@@ -134,8 +135,38 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 			return ctrl.Result{Requeue: false}, nil
 		case wfSubmitted:
 			// reconcile until completed or failed
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
+	case v1alpha1.StateChannelFlowCompleted:
+		wfName, err := r.startChaincodeFlow(ctx, network)
+		if err != nil {
+			r.Log.Error(err, "Starting chaincode-flow failed")
+			return ctrl.Result{}, err
+		}
+		r.Log.Info("Started chaincode-flow", "name", wfName)
+		network.Status.Workflow = wfName
+		r.setState(ctx, network, v1alpha1.StateChaincodeFlowSubmitted, "", "")
+	case v1alpha1.StateChaincodeFlowSubmitted:
+		status, err := r.getWorkflowStatus(ctx, network, network.Status.Workflow)
+		if err != nil {
+			r.Log.Error(err, "Failed to get workflow status")
+			return ctrl.Result{}, err
+		}
+		r.Log.Info("Got workflow status", "status", status)
+		switch status {
+		case wfCompleted:
+			r.setState(ctx, network, v1alpha1.StateChaincodeFlowCompleted, "", "")
+		case wfFailed:
+			r.setState(ctx, network, v1alpha1.StateFailed, "ChaincodeFlowFailed", "Chaincode flow failed")
+			return ctrl.Result{Requeue: false}, nil
+		case wfSubmitted:
+			// reconcile until completed or failed
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		}
+	case v1alpha1.StateChaincodeFlowCompleted:
+		network.Status.Workflow = ""
+		r.setState(ctx, network, v1alpha1.StateReady, "Ready", "HL Fabric Network is ready")
+		return ctrl.Result{Requeue: false}, nil
 	}
 
 	return ctrl.Result{Requeue: false}, nil

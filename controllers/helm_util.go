@@ -54,7 +54,7 @@ func (r *FabricNetworkReconciler) installHelmChart(ctx context.Context, network 
 			"orderer.launchPods=false",
 		}
 	}
-	values, err := r.getChartValues(network, settings, extraValues...)
+	values, err := r.getChartValues(network, settings, "hlf-kube-values.yaml", extraValues...)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 		return err
 	}
 
-	values, err := r.getChartValues(network, settings)
+	values, err := r.getChartValues(network, settings, "hlf-kube-values.yaml")
 	if err != nil {
 		r.Log.Error(err, "Couldnt get chart values")
 		return err
@@ -105,7 +105,6 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 	client.Namespace = network.Namespace
 
 	r.Log.Info("updating release")
-	// TODO for Kafka orderer, wait is not reliable. how to handle this?
 	release, err := client.Run("hlf-kube", chart, values)
 	if err != nil {
 		return err
@@ -118,19 +117,18 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 func (r *FabricNetworkReconciler) renderChannelFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
 	// TODO
 	chartDir := "/home/raft/c/raft_code/PIVT/fabric-kube/channel-flow/"
-	return r.renderHelmChart(ctx, network, chartDir)
+	return r.renderHelmChart(ctx, network, chartDir, "channel-flow-values.yaml")
 }
 
-func (r *FabricNetworkReconciler) renderHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork, chartDir string) (string, error) {
-	// TODO mutex this.
-	// os.Setenv("HELM_NAMESPACE", network.Namespace)
+func (r *FabricNetworkReconciler) renderChaincodeFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
+	// TODO
+	chartDir := "/home/raft/c/raft_code/PIVT/fabric-kube/chaincode-flow/"
+	return r.renderHelmChart(ctx, network, chartDir, "chaincode-flow-values.yaml")
+}
+
+func (r *FabricNetworkReconciler) renderHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork, chartDir string, valuesFile string) (string, error) {
 	settings := cli.New()
 	actionConfig := new(action.Configuration)
-
-	// if err := actionConfig.Init(settings.RESTClientGetter(), network.Namespace, "secret", log.Printf); err != nil {
-	// 	r.Log.Error(err, "Couldnt init")
-	// 	return err
-	// }
 
 	chart, err := loader.Load(chartDir)
 	if err != nil {
@@ -143,7 +141,7 @@ func (r *FabricNetworkReconciler) renderHelmChart(ctx context.Context, network *
 	}
 
 	extraValues := []string{}
-	values, err := r.getChartValues(network, settings, extraValues...)
+	values, err := r.getChartValues(network, settings, valuesFile, extraValues...)
 	if err != nil {
 		return "", err
 	}
@@ -218,7 +216,7 @@ func getChartDir(network *v1alpha1.FabricNetwork) string {
 	return "/home/raft/c/raft_code/PIVT/fabric-kube/hlf-kube/"
 }
 
-func (r *FabricNetworkReconciler) getChartValues(network *v1alpha1.FabricNetwork, settings *cli.EnvSettings, extraValues ...string) (map[string]interface{}, error) {
+func (r *FabricNetworkReconciler) getChartValues(network *v1alpha1.FabricNetwork, settings *cli.EnvSettings, valuesFile string, extraValues ...string) (map[string]interface{}, error) {
 	valueOpts := &values.Options{}
 	valueOpts.ValueFiles = []string{
 		// TODO
@@ -228,7 +226,7 @@ func (r *FabricNetworkReconciler) getChartValues(network *v1alpha1.FabricNetwork
 		// "/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-kafka/network.yaml",
 		// "/home/raft/c/raft_code/PIVT/fabric-kube/samples/scaled-kafka/crypto-config.yaml",
 
-		getChartDir(network) + "user-values.yaml",
+		getChartDir(network) + valuesFile,
 		getChartDir(network) + "operator-values.yaml",
 	}
 	valueOpts.Values = append([]string{
@@ -247,30 +245,47 @@ func (r *FabricNetworkReconciler) getChartValues(network *v1alpha1.FabricNetwork
 }
 
 func (r *FabricNetworkReconciler) createValuesFiles(ctx context.Context, network *v1alpha1.FabricNetwork) error {
-	yml, err := yaml.JSONToYAML(network.Spec.HlfKube.Raw)
+	chartDir := getChartDir(network)
+
+	if err := createValuesFile(network.Spec.HlfKube.Raw, chartDir+"hlf-kube-values.yaml"); err != nil {
+		return err
+	}
+	if err := createValuesFile(network.Spec.ChannelFlow.Raw, chartDir+"channel-flow-values.yaml"); err != nil {
+		return err
+	}
+	if err := createValuesFile(network.Spec.ChaincodeFlow.Raw, chartDir+"chaincode-flow-values.yaml"); err != nil {
+		return err
+	}
+
+	hostAliases, err := r.getHostAliases(ctx, network)
 	if err != nil {
 		return err
 	}
 
-	userValuesFile := getChartDir(network) + "user-values.yaml"
-	if err := ioutil.WriteFile(userValuesFile, yml, 0644); err != nil {
-		return err
+	values := helmValues{
+		HostAliases: hostAliases,
 	}
 
-	values := helmValues{}
-
-	values.HostAliases, err = r.getHostAliases(ctx, network)
+	yml, err := yaml.Marshal(values)
 	if err != nil {
 		return err
 	}
 
-	yml, err = yaml.Marshal(values)
-	if err != nil {
-		return err
-	}
-
-	hostAliasesFile := getChartDir(network) + "operator-values.yaml"
+	hostAliasesFile := chartDir + "operator-values.yaml"
 	if err := ioutil.WriteFile(hostAliasesFile, yml, 0644); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createValuesFile(contents []byte, fileName string) error {
+	yml, err := yaml.JSONToYAML(contents)
+	if err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile(fileName, yml, 0644); err != nil {
 		return err
 	}
 

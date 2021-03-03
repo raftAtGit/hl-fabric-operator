@@ -38,6 +38,14 @@ spec:
           spec:
             description: FabricNetworkSpec defines the desired state of FabricNetwork
             properties:
+              chaincode-flow:
+                description: Additional values passed to chaincode-flow
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              channel-flow:
+                description: Additional values passed to channel-flow
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               configtx:
                 description: Source of the configtx.yaml file. either a Kubernetes
                   Secret or a file. file can only be used via CLI
@@ -58,6 +66,7 @@ spec:
                     type: string
                 type: object
               hlf-kube:
+                description: Additional values passed to hlf-kube Helm chart
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               hostAliases:

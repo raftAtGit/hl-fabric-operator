@@ -30,6 +30,22 @@ func (r *FabricNetworkReconciler) startChannelFlow(ctx context.Context, network 
 		r.Log.Error(err, "Rendering channel-flow failed")
 		return "", err
 	}
+
+	return r.submitWorkflow(network, wfManifest)
+}
+
+func (r *FabricNetworkReconciler) startChaincodeFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
+	wfManifest, err := r.renderChaincodeFlow(ctx, network)
+	if err != nil {
+		r.Log.Error(err, "Rendering chaincode-flow failed")
+		return "", err
+	}
+
+	return r.submitWorkflow(network, wfManifest)
+}
+
+func (r *FabricNetworkReconciler) submitWorkflow(network *v1alpha1.FabricNetwork, wfManifest string) (string, error) {
+
 	wfs, err := r.unmarshalWorkflows([]byte(wfManifest), true)
 	if err != nil {
 		r.Log.Error(err, "Unmarshaling workflow failed")
