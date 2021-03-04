@@ -19,5 +19,6 @@ require (
 replace (
 	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20191216044856-a8371794149d
 	github.com/docker/docker => github.com/moby/moby v17.12.0-ce-rc1.0.20200618181300-9dc6525e6118+incompatible
-	sigs.k8s.io/kustomize => ../gofix/sigs.k8s.io/kustomize
+	github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.3 // fix for kustomize issue
+	// sigs.k8s.io/kustomize => ../gofix/sigs.k8s.io/kustomize
 )
