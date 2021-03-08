@@ -6,14 +6,20 @@ spec:
 
   # source of the configtx.yaml file. either a Kubernetes Secret or a file.
   configtx:
-    # file: # see CLI for usage
-    secret: hlf-configtx.yaml
+    file: configtx.yaml # see CLI for usage
+    # secret: hlf-configtx.yaml
 
   # source of the genesis block. either a Kubernetes Secret or a file.
   # if none provided Fabric Operator will create the genesis block
   genesis: {}
     # file: # see CLI for usage
     # secret: hlf-genesis.block
+
+  chaincode:
+    version: "1.0"
+    # language: node
+    folder: ../chaincode # see CLI for usage
+    # configMaps: implied list
 
   hostAliases: 
   - ip: 10.0.240.0

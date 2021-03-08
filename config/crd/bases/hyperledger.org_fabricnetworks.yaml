@@ -38,6 +38,25 @@ spec:
           spec:
             description: FabricNetworkSpec defines the desired state of FabricNetwork
             properties:
+              chaincode:
+                description: ChaincodeConfig is the global chaincode settings and
+                  source of chaincode sources. Source is either a folder or an implied
+                  list of ConfigMaps. Each chaincode is TAR acrhived and expected
+                  to be in a ConfigMap hlf-chaincode--<chaincode name>
+                properties:
+                  folder:
+                    description: Chaincode will be installed to all peers in these
+                      peer organizations
+                    type: string
+                  language:
+                    description: Programming language of chaincode. If defined, this
+                      will override the global chaincode.language value
+                    type: string
+                  version:
+                    description: Version of chaincode. If defined, this will override
+                      the global chaincode.version value
+                    type: string
+                type: object
               chaincode-flow:
                 description: Additional values passed to chaincode-flow
                 type: object
@@ -47,8 +66,8 @@ spec:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               configtx:
-                description: Source of the configtx.yaml file. either a Kubernetes
-                  Secret or a file. file can only be used via CLI
+                description: Configtx is the source of configtx.yaml file. either
+                  a Kubernetes Secret or a file. file can only be used via CLI
                 properties:
                   file:
                     type: string
@@ -56,9 +75,9 @@ spec:
                     type: string
                 type: object
               genesis:
-                description: Source of the genesis block. either a Kubernetes Secret
-                  or a file. If none provided Fabric Operator will create the genesis
-                  block. file can only be used via CLI
+                description: Genesis is the source of genesis block. either a Kubernetes
+                  Secret or a file. If none provided Fabric Operator will create the
+                  genesis block. file can only be used via CLI
                 properties:
                   file:
                     type: string

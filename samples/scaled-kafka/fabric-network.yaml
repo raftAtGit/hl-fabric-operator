@@ -6,8 +6,14 @@ spec:
 
   # source of the configtx.yaml file. either a Kubernetes Secret or a file.
   configtx:
-    # file: # see CLI for usage
-    secret: hlf-configtx.yaml
+    file: configtx.yaml # see CLI for usage
+    # secret: hlf-configtx.yaml
+
+  chaincode:
+    version: "1.0"
+    # language: node
+    folder: ../chaincode # see CLI for usage
+    # configMaps: implied list
 
   # topology of the Fabric network managed by Fabric Operator
   # also contains some top level properties which is applied to whole network

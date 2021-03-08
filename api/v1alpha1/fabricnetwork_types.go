@@ -10,8 +10,9 @@ import (
 
 // FabricNetworkSpec defines the desired state of FabricNetwork
 type FabricNetworkSpec struct {
-	Configtx Configtx `json:"configtx"`
-	Genesis  Genesis  `json:"genesis,omitempty"`
+	Configtx  Configtx        `json:"configtx"`
+	Genesis   Genesis         `json:"genesis,omitempty"`
+	Chaincode ChaincodeConfig `json:"chaincode,omitempty"`
 
 	// Adds additional DNS entries to /etc/hosts files of pods
 	// This is provided for communication with external peers/orderers
@@ -79,19 +80,31 @@ type FabricNetworkList struct {
 	Items           []FabricNetwork `json:"items"`
 }
 
-// Source of the configtx.yaml file. either a Kubernetes Secret or a file.
+// Configtx is the source of configtx.yaml file. either a Kubernetes Secret or a file.
 // file can only be used via CLI
 type Configtx struct {
 	File   string `json:"file,omitempty"`
 	Secret string `json:"secret,omitempty"`
 }
 
-// Source of the genesis block. either a Kubernetes Secret or a file.
+// Genesis is the source of genesis block. either a Kubernetes Secret or a file.
 // If none provided Fabric Operator will create the genesis block.
 // file can only be used via CLI
 type Genesis struct {
 	File   string `json:"file,omitempty"`
 	Secret string `json:"secret,omitempty"`
+}
+
+// ChaincodeConfig is the global chaincode settings and source of chaincode sources.
+// Source is either a folder or an implied list of ConfigMaps.
+// Each chaincode is TAR acrhived and expected to be in a ConfigMap hlf-chaincode--<chaincode name>
+type ChaincodeConfig struct {
+	// Version of chaincode. If defined, this will override the global chaincode.version value
+	Version string `json:"version,omitempty"`
+	// Programming language of chaincode. If defined, this will override the global chaincode.language value
+	Language string `json:"language,omitempty"`
+	// Chaincode will be installed to all peers in these peer organizations
+	Folder string `json:"folder,omitempty"`
 }
 
 // Topology of the Fabric network managed by Fabric Operator.
