@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"strconv"
 
@@ -82,7 +82,7 @@ func (r *FabricNetworkReconciler) installHelmChart(ctx context.Context, network 
 	settings := cli.New()
 	actionConfig := new(action.Configuration)
 
-	if err := actionConfig.Init(settings.RESTClientGetter(), network.Namespace, "secret", log.Printf); err != nil {
+	if err := actionConfig.Init(settings.RESTClientGetter(), network.Namespace, "secret", r.helmLog); err != nil {
 		r.Log.Error(err, "Couldnt init")
 		return err
 	}
@@ -130,7 +130,7 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 	settings := cli.New()
 	actionConfig := new(action.Configuration)
 
-	if err := actionConfig.Init(settings.RESTClientGetter(), network.Namespace, "secret", log.Printf); err != nil {
+	if err := actionConfig.Init(settings.RESTClientGetter(), network.Namespace, "secret", r.helmLog); err != nil {
 		r.Log.Error(err, "Couldnt init")
 		return err
 	}
@@ -165,14 +165,13 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 
 }
 func (r *FabricNetworkReconciler) renderChannelFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
-	// TODO
-	chartDir := "/home/raft/c/raft_code/PIVT/fabric-kube/channel-flow/"
+	chartDir := settings.PivtDir + "/fabric-kube/channel-flow/"
 	return r.renderHelmChart(ctx, network, chartDir, "channel-flow-values.yaml")
 }
 
 func (r *FabricNetworkReconciler) renderChaincodeFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
 	// TODO
-	chartDir := "/home/raft/c/raft_code/PIVT/fabric-kube/chaincode-flow/"
+	chartDir := settings.PivtDir + "/fabric-kube/chaincode-flow/"
 	return r.renderHelmChart(ctx, network, chartDir, "chaincode-flow-values.yaml")
 }
 
@@ -376,4 +375,8 @@ func (r *FabricNetworkReconciler) getHostAliases(ctx context.Context, network *v
 		allHostAliases = append(allHostAliases, hostAliases...)
 	}
 	return allHostAliases, nil
+}
+
+func (r *FabricNetworkReconciler) helmLog(format string, v ...interface{}) {
+	r.Log.Info("Helm log", "message", fmt.Sprintf(format, v...))
 }

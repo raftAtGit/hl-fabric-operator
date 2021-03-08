@@ -24,6 +24,13 @@ type FabricNetworkReconciler struct {
 // +kubebuilder:rbac:groups=hyperledger.org,resources=fabricnetworks/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=hyperledger.org,resources=fabricnetworks/finalizers,verbs=update
 
+// for Helm
+// +kubebuilder:rbac:groups="",resources=*,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
+
+// for Argo
+// +kubebuilder:rbac:groups=argoproj.io,resources=workflows,verbs=get;list;watch;create;update;patch;delete
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *FabricNetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Log.Info("SetupWithManager", "settings", settings)
