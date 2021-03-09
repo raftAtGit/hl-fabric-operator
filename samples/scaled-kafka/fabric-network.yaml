@@ -89,10 +89,10 @@ spec:
   # conflicts with top level values. for example: tlsEnabled
   # or with Fabric Operator created values for example: hlf-kube.chaincode.excludeAll or chaincode-flow.flow.chaincode.include
   hlf-kube: 
-    orderer:
-      replicas: 3
     hlf-kafka:
       enabled: true
+    orderer:
+      replicas: 3
     peer:
       docker:
         dind: 
