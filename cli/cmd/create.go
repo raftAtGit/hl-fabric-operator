@@ -38,7 +38,6 @@ Usage details and samples will be here`,
 func init() {
 	rootCmd.AddCommand(createCmd)
 
-	// submitCmd.Flags().BoolVarP(&force, "force", "A", false, "list FabricNetworks across all namespaces")
 	createCmd.Flags().BoolVar(&overwrite, "overwrite", false, "overwrite existing Secrets and ConfigMaps")
 }
 
@@ -154,6 +153,9 @@ func createOrUpdateConfigtxSecret(ctx context.Context, cl client.Client, network
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "hlf-configtx.yaml",
 			Namespace: namespace,
+			Labels: map[string]string{
+				"raft.io/fabric-operator-cli-created-for": network.Name,
+			},
 		},
 		Data: map[string][]byte{
 			"configtx.yaml": bytes,
@@ -206,14 +208,6 @@ func createOrUpdateChaincodeConfigMaps(ctx context.Context, cl client.Client, ne
 			return err
 		}
 
-		// fileToWrite, err := os.OpenFile("/tmp/compress.tar", os.O_CREATE|os.O_RDWR, os.FileMode(0666))
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// if _, err := io.Copy(fileToWrite, &buffer); err != nil {
-		// 	panic(err)
-		// }
-
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -221,6 +215,7 @@ func createOrUpdateChaincodeConfigMaps(ctx context.Context, cl client.Client, ne
 				Labels: map[string]string{
 					"chaincodeName": name,
 					"type":          "chaincode",
+					"raft.io/fabric-operator-cli-created-for": network.Name,
 				},
 			},
 			BinaryData: map[string][]byte{

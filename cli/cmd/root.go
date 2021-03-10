@@ -28,6 +28,7 @@ var (
 	namespace     string
 	allNamespaces = false
 	overwrite     = false
+	keepResources = false
 )
 
 // Execute adds all child commands to the root command and sets flags appropriately.

@@ -156,7 +156,7 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 	return nil
 }
 
-// uninstalls the hlf-kube Helm chart if its found and Chart.Metadata.Name is hlf-kube
+// uninstalls the hlf-kube Helm chart if its found and Chart.Metadata.Name is hlf-kube and annotated for specified FabricNetwork
 func (r *FabricNetworkReconciler) maybeUninstallHelmChart(ctx context.Context, namespace string, name string) error {
 	_, actionConfig, err := r.initHelmClient(namespace)
 	if err != nil {
