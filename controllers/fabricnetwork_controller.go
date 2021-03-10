@@ -61,7 +61,7 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 
 			// TODO check if there are other FabricNetworks
 			// o/w how to be sure helm chart is created for this FabricNetwork
-			if err = r.maybeUninstallHelmChart(ctx, request.NamespacedName.Namespace); err != nil {
+			if err = r.maybeUninstallHelmChart(ctx, request.NamespacedName.Namespace, request.NamespacedName.Name); err != nil {
 				r.Log.Error(err, "Failed to uninstall Helm chart")
 			}
 			if err = r.deleteWorkflows(ctx, request.NamespacedName.Namespace, request.NamespacedName.Name); err != nil {

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"helm.sh/helm/v3/pkg/action"
+	hchart "helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/cli/values"
@@ -83,7 +84,7 @@ func (r *FabricNetworkReconciler) installHelmChart(ctx context.Context, network 
 		return err
 	}
 
-	chart, err := loader.Load(getNetworkDir(network))
+	chart, err := loadHelmChart(network)
 	if err != nil {
 		return err
 	}
@@ -126,7 +127,7 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 		return err
 	}
 
-	chart, err := loader.Load(getNetworkDir(network))
+	chart, err := loadHelmChart(network)
 	if err != nil {
 		return err
 	}
@@ -156,7 +157,7 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 }
 
 // uninstalls the hlf-kube Helm chart if its found and Chart.Metadata.Name is hlf-kube
-func (r *FabricNetworkReconciler) maybeUninstallHelmChart(ctx context.Context, namespace string) error {
+func (r *FabricNetworkReconciler) maybeUninstallHelmChart(ctx context.Context, namespace string, name string) error {
 	_, actionConfig, err := r.initHelmClient(namespace)
 	if err != nil {
 		return err
@@ -172,9 +173,16 @@ func (r *FabricNetworkReconciler) maybeUninstallHelmChart(ctx context.Context, n
 		}
 		return err
 	}
-	r.Log.Info("got Helm release", "release", release.Chart.Metadata.Name, "version", release.Chart.Metadata.Version)
+	r.Log.Info("got Helm release", "release", release.Chart.Metadata.Name, "version", release.Chart.Metadata.Version,
+		"annotations", release.Chart.Metadata.Annotations)
+
 	if release.Chart.Metadata.Name != "hlf-kube" {
 		r.Log.Info("Helm release is not hlf-kube, skipping uninstall")
+		return nil
+	}
+
+	if release.Chart.Metadata.Annotations["raft.io/fabric-operator-created-for"] != name {
+		r.Log.Info("Helm release is created for another FabricNetwork, skipping uninstall")
 		return nil
 	}
 
@@ -189,6 +197,19 @@ func (r *FabricNetworkReconciler) maybeUninstallHelmChart(ctx context.Context, n
 	r.Log.Info("uninstalled release hlf-kube")
 
 	return nil
+}
+
+func loadHelmChart(network *v1alpha1.FabricNetwork) (*hchart.Chart, error) {
+	chart, err := loader.Load(getNetworkDir(network))
+	if err != nil {
+		return nil, err
+	}
+	if chart.Metadata.Annotations == nil {
+		chart.Metadata.Annotations = make(map[string]string)
+	}
+	chart.Metadata.Annotations["raft.io/fabric-operator-created-for"] = network.Name
+
+	return chart, nil
 }
 
 func (r *FabricNetworkReconciler) renderChannelFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
