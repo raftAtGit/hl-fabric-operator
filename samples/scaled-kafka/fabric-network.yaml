@@ -44,7 +44,7 @@ spec:
         peerCount: 2
 
   network:
-    # used by init script to create genesis block and by peer-org-flow to parse consortiums
+    # used to create genesis block and by peer-org-flow to parse consortiums
     genesisProfile: OrdererGenesis
     # used by init script to create genesis block 
     systemChannelID: testchainid

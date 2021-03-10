@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -77,13 +78,8 @@ func (r *FabricNetworkReconciler) prepareHelmChart(ctx context.Context, network 
 }
 
 func (r *FabricNetworkReconciler) installHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork) error {
-	// TODO mutex this.
-	os.Setenv("HELM_NAMESPACE", network.Namespace)
-	settings := cli.New()
-	actionConfig := new(action.Configuration)
-
-	if err := actionConfig.Init(settings.RESTClientGetter(), network.Namespace, "secret", r.helmLog); err != nil {
-		r.Log.Error(err, "Couldnt init")
+	settings, actionConfig, err := r.initHelmClient(network.Namespace)
+	if err != nil {
 		return err
 	}
 
@@ -125,13 +121,8 @@ func (r *FabricNetworkReconciler) installHelmChart(ctx context.Context, network 
 }
 
 func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork) error {
-	// TODO mutex this.
-	os.Setenv("HELM_NAMESPACE", network.Namespace)
-	settings := cli.New()
-	actionConfig := new(action.Configuration)
-
-	if err := actionConfig.Init(settings.RESTClientGetter(), network.Namespace, "secret", r.helmLog); err != nil {
-		r.Log.Error(err, "Couldnt init")
+	settings, actionConfig, err := r.initHelmClient(network.Namespace)
+	if err != nil {
 		return err
 	}
 
@@ -162,15 +153,50 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 	r.Log.Info("updated release", "name", release.Name, "version", release.Version, "namespace", network.Namespace)
 
 	return nil
-
 }
+
+// uninstalls the hlf-kube Helm chart if its found and Chart.Metadata.Name is hlf-kube
+func (r *FabricNetworkReconciler) maybeUninstallHelmChart(ctx context.Context, namespace string) error {
+	_, actionConfig, err := r.initHelmClient(namespace)
+	if err != nil {
+		return err
+	}
+
+	getClient := action.NewGet(actionConfig)
+
+	release, err := getClient.Run("hlf-kube")
+	if err != nil {
+		if strings.Contains(err.Error(), "release: not found") {
+			r.Log.Info("Helm release is not found, skipping uninstall")
+			return nil
+		}
+		return err
+	}
+	r.Log.Info("got Helm release", "release", release.Chart.Metadata.Name, "version", release.Chart.Metadata.Version)
+	if release.Chart.Metadata.Name != "hlf-kube" {
+		r.Log.Info("Helm release is not hlf-kube, skipping uninstall")
+		return nil
+	}
+
+	client := action.NewUninstall(actionConfig)
+	client.KeepHistory = false
+
+	r.Log.Info("uninstalling release")
+	_, err = client.Run("hlf-kube")
+	if err != nil {
+		return err
+	}
+	r.Log.Info("uninstalled release hlf-kube")
+
+	return nil
+}
+
 func (r *FabricNetworkReconciler) renderChannelFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
 	chartDir := settings.PivtDir + "/fabric-kube/channel-flow/"
 	return r.renderHelmChart(ctx, network, chartDir, "channel-flow-values.yaml")
 }
 
 func (r *FabricNetworkReconciler) renderChaincodeFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
-	// TODO
 	chartDir := settings.PivtDir + "/fabric-kube/chaincode-flow/"
 	return r.renderHelmChart(ctx, network, chartDir, "chaincode-flow-values.yaml")
 }
@@ -263,10 +289,6 @@ func (r *FabricNetworkReconciler) isHelmChartReady(ctx context.Context, network 
 func getNetworkDir(network *v1alpha1.FabricNetwork) string {
 	return settings.NetworkDir + "/" + network.Namespace + "/" + network.Name
 }
-
-// func getChartDir(network *v1alpha1.FabricNetwork) string {
-// 	return getNetworkDir(network) + "hlf-kube"
-// }
 
 func (r *FabricNetworkReconciler) getChartValues(network *v1alpha1.FabricNetwork, settings *cli.EnvSettings, valuesFile string, extraValues ...string) (map[string]interface{}, error) {
 	valueOpts := &values.Options{}
@@ -379,4 +401,18 @@ func (r *FabricNetworkReconciler) getHostAliases(ctx context.Context, network *v
 
 func (r *FabricNetworkReconciler) helmLog(format string, v ...interface{}) {
 	r.Log.Info("Helm log", "message", fmt.Sprintf(format, v...))
+}
+
+func (r *FabricNetworkReconciler) initHelmClient(namespace string) (*cli.EnvSettings, *action.Configuration, error) {
+	// TODO mutex this.
+	os.Setenv("HELM_NAMESPACE", namespace)
+	settings := cli.New()
+	actionConfig := new(action.Configuration)
+
+	if err := actionConfig.Init(settings.RESTClientGetter(), namespace, "secret", r.helmLog); err != nil {
+		r.Log.Error(err, "Couldnt init Helm client")
+		return nil, nil, err
+	}
+
+	return settings, actionConfig, nil
 }

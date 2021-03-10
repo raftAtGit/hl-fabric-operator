@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	wf "github.com/argoproj/argo/v3/pkg/apiclient/workflow"
 	wfv1 "github.com/argoproj/argo/v3/pkg/apis/workflow/v1alpha1"
@@ -54,6 +55,11 @@ func (r *FabricNetworkReconciler) submitWorkflow(network *v1alpha1.FabricNetwork
 	if len(wfs) != 1 {
 		return "", fmt.Errorf("Rendered template has %d workflows, expected exactly one", len(wfs))
 	}
+
+	if wfs[0].Labels == nil {
+		wfs[0].Labels = make(map[string]string)
+	}
+	wfs[0].Labels["raft.io/fabric-operator-created-for"] = network.Name
 
 	ctx, apiClient := client.NewAPIClient()
 	serviceClient := apiClient.NewWorkflowServiceClient()
@@ -117,4 +123,26 @@ func (r *FabricNetworkReconciler) unmarshalWorkflows(wfBytes []byte, strict bool
 		return nil, err
 	}
 	return yamlWfs, nil
+}
+
+func (r *FabricNetworkReconciler) deleteWorkflows(ctx context.Context, namespace string, name string) error {
+	wfList := &wfv1.WorkflowList{}
+	listOpts := []runtimeClient.ListOption{
+		runtimeClient.InNamespace(namespace),
+		runtimeClient.MatchingLabels(map[string]string{"raft.io/fabric-operator-created-for": name}),
+	}
+
+	if err := r.List(ctx, wfList, listOpts...); err != nil {
+		r.Log.Error(err, "Failed to get WorkflowList")
+		return err
+	}
+
+	for _, wf := range wfList.Items {
+		if err := r.Delete(ctx, &wf); err != nil {
+			return err
+		}
+		r.Log.Info("deleted workflow", "workflow", wf.Name)
+	}
+
+	return nil
 }

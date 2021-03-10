@@ -57,8 +57,17 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	err := r.Get(ctx, request.NamespacedName, network)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			r.Log.Info("FabricNetwork resource not found")
-			r.Log.Info("TODO delete resources")
+			r.Log.Info("FabricNetwork resource not found, deleting resources")
+
+			// TODO check if there are other FabricNetworks
+			// o/w how to be sure helm chart is created for this FabricNetwork
+			if err = r.maybeUninstallHelmChart(ctx, request.NamespacedName.Namespace); err != nil {
+				r.Log.Error(err, "Failed to uninstall Helm chart")
+			}
+			if err = r.deleteWorkflows(ctx, request.NamespacedName.Namespace, request.NamespacedName.Name); err != nil {
+				r.Log.Error(err, "Failed to delete workflows")
+			}
+
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.

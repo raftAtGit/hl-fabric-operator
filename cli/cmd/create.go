@@ -32,7 +32,6 @@ Usage details and samples will be here`,
 		if err := submitNetwork(ctx, client, args); err != nil {
 			fail("%v", err)
 		}
-		fmt.Println("okay")
 	},
 }
 

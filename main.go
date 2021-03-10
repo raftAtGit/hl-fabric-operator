@@ -17,6 +17,8 @@ import (
 
 	"github.com/raftAtGit/hl-fabric-operator/api/v1alpha1"
 	"github.com/raftAtGit/hl-fabric-operator/controllers"
+
+	wfv1 "github.com/argoproj/argo/v3/pkg/apis/workflow/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -29,6 +31,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(wfv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
