@@ -15,6 +15,13 @@ spec:
     # file: # see CLI for usage
     # secret: hlf-genesis.block
 
+  # source of the crypto materials. either a Kubernetes Secret or a folder.
+  # if none provided Fabric Operator will create the crypto materials via cryptogen tool.
+  # the secret contains TAR archived crypto material
+  crypto-config: {}
+    # folder: /path/to/crypto-config/folder
+    # secret: hlf-crypto-config
+
   chaincode:
     version: "1.0"
     # language: node

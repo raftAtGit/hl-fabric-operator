@@ -58,7 +58,7 @@ FROM alpine
 WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY --from=git /workspace/PIVT /opt/fabric-operator/PIVT/
-COPY --from=curl /fabric/bin/configtxgen /fabric/bin/cryptogen /opt/hlf/
+COPY --from=curl /fabric/bin/configtxgen /fabric/bin/cryptogen /fabric/bin/configtxlator /opt/hlf/
 
 ENV PATH "$PATH:/opt/hlf"
 

@@ -10,9 +10,10 @@ import (
 
 // FabricNetworkSpec defines the desired state of FabricNetwork
 type FabricNetworkSpec struct {
-	Configtx  Configtx        `json:"configtx"`
-	Genesis   Genesis         `json:"genesis,omitempty"`
-	Chaincode ChaincodeConfig `json:"chaincode,omitempty"`
+	Configtx     Configtx        `json:"configtx"`
+	Genesis      Genesis         `json:"genesis,omitempty"`
+	CryptoConfig CryptoConfig    `json:"crypto-config,omitempty"`
+	Chaincode    ChaincodeConfig `json:"chaincode,omitempty"`
 
 	// Adds additional DNS entries to /etc/hosts files of pods
 	// This is provided for communication with external peers/orderers
@@ -36,7 +37,6 @@ type FabricNetworkSpec struct {
 // FabricNetworkStatus defines the observed state of FabricNetwork
 type FabricNetworkStatus struct {
 	State    State  `json:"state,omitempty"`
-	Reason   string `json:"reason,omitempty"`
 	Message  string `json:"message,omitempty"`
 	Workflow string `json:"workflow,omitempty"`
 }
@@ -83,7 +83,8 @@ type FabricNetworkList struct {
 // Configtx is the source of configtx.yaml file. either a Kubernetes Secret or a file.
 // file can only be used via CLI
 type Configtx struct {
-	File   string `json:"file,omitempty"`
+	File string `json:"file,omitempty"`
+	// +kubebuilder:validation:Enum=hlf-configtx.yaml
 	Secret string `json:"secret,omitempty"`
 }
 
@@ -91,7 +92,18 @@ type Configtx struct {
 // If none provided Fabric Operator will create the genesis block.
 // file can only be used via CLI
 type Genesis struct {
-	File   string `json:"file,omitempty"`
+	File string `json:"file,omitempty"`
+	// +kubebuilder:validation:Enum=hlf-genesis.block
+	Secret string `json:"secret,omitempty"`
+}
+
+// CryptoConfig is the source of crypto materials. either a Kubernetes Secret or a folder.
+// If none provided Fabric Operator will create the crypto materials via cryptogen tool.
+// The secret contains TAR archived crypto material in the field "crypto-config"
+type CryptoConfig struct {
+	// Folder containing crypto-material
+	Folder string `json:"folder,omitempty"`
+	// +kubebuilder:validation:Enum=hlf-crypto-config
 	Secret string `json:"secret,omitempty"`
 }
 
@@ -103,7 +115,7 @@ type ChaincodeConfig struct {
 	Version string `json:"version,omitempty"`
 	// Programming language of chaincode. If defined, this will override the global chaincode.language value
 	Language string `json:"language,omitempty"`
-	// Chaincode will be installed to all peers in these peer organizations
+	// Folder containing chaincode folders
 	Folder string `json:"folder,omitempty"`
 }
 
@@ -148,8 +160,8 @@ type Network struct {
 	GenesisProfile  string `json:"genesisProfile,omitempty"`
 	SystemChannelID string `json:"systemChannelID,omitempty"`
 
-	Channel   []Channel   `json:"channels"`
-	Chaincode []Chaincode `json:"chaincodes"`
+	Channels   []Channel   `json:"channels"`
+	Chaincodes []Chaincode `json:"chaincodes"`
 }
 
 type Channel struct {

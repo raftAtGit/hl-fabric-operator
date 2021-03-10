@@ -85,7 +85,7 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		if rejected {
 			return ctrl.Result{}, nil
 		}
-		r.setState(ctx, network, v1alpha1.StateNew, "", "")
+		r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateNew})
 	case v1alpha1.StateNew:
 		if err := r.validate(ctx, network); err != nil {
 			r.Log.Error(err, "Validation failed")
@@ -100,16 +100,16 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 			return ctrl.Result{}, err
 		}
 		if network.Spec.Topology.UseActualDomains {
-			r.setState(ctx, network, v1alpha1.StateHelmChartNeedsUpdate, "", "")
+			r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateHelmChartNeedsUpdate})
 		} else {
-			r.setState(ctx, network, v1alpha1.StateHelmChartInstalled, "", "")
+			r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateHelmChartInstalled})
 		}
 	case v1alpha1.StateHelmChartNeedsUpdate:
 		if err := r.updateHelmChart(ctx, network); err != nil {
 			r.Log.Error(err, "Updating Helm chart failed")
 			return ctrl.Result{}, err
 		}
-		r.setState(ctx, network, v1alpha1.StateHelmChartInstalled, "", "")
+		r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateHelmChartInstalled})
 	case v1alpha1.StateHelmChartInstalled:
 		ready, err := r.isHelmChartReady(ctx, network)
 		if err != nil {
@@ -118,7 +118,7 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 			return ctrl.Result{}, err
 		}
 		if ready {
-			r.setState(ctx, network, v1alpha1.StateHelmChartReady, "", "")
+			r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateHelmChartReady})
 		} else {
 			// reconcile until ready
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
@@ -130,8 +130,7 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 			return ctrl.Result{}, err
 		}
 		r.Log.Info("Started channel-flow", "name", wfName)
-		network.Status.Workflow = wfName
-		r.setState(ctx, network, v1alpha1.StateChannelFlowSubmitted, "", "")
+		r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateChannelFlowSubmitted, Workflow: wfName})
 	case v1alpha1.StateChannelFlowSubmitted:
 		status, err := r.getWorkflowStatus(ctx, network, network.Status.Workflow)
 		if err != nil {
@@ -141,9 +140,9 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		r.Log.Info("Got workflow status", "status", status)
 		switch status {
 		case wfCompleted:
-			r.setState(ctx, network, v1alpha1.StateChannelFlowCompleted, "", "")
+			r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateChannelFlowCompleted})
 		case wfFailed:
-			r.setState(ctx, network, v1alpha1.StateFailed, "ChannelFlowFailed", "Channel flow failed")
+			r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateFailed, Message: "Channel flow failed"})
 			return ctrl.Result{Requeue: false}, nil
 		case wfSubmitted:
 			// reconcile until completed or failed
@@ -156,8 +155,7 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 			return ctrl.Result{}, err
 		}
 		r.Log.Info("Started chaincode-flow", "name", wfName)
-		network.Status.Workflow = wfName
-		r.setState(ctx, network, v1alpha1.StateChaincodeFlowSubmitted, "", "")
+		r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateChaincodeFlowSubmitted, Workflow: wfName})
 	case v1alpha1.StateChaincodeFlowSubmitted:
 		status, err := r.getWorkflowStatus(ctx, network, network.Status.Workflow)
 		if err != nil {
@@ -167,17 +165,16 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		r.Log.Info("Got workflow status", "status", status)
 		switch status {
 		case wfCompleted:
-			r.setState(ctx, network, v1alpha1.StateChaincodeFlowCompleted, "", "")
+			r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateChaincodeFlowCompleted})
 		case wfFailed:
-			r.setState(ctx, network, v1alpha1.StateFailed, "ChaincodeFlowFailed", "Chaincode flow failed")
+			r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateFailed, Message: "Chaincode flow failed"})
 			return ctrl.Result{Requeue: false}, nil
 		case wfSubmitted:
 			// reconcile until completed or failed
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 	case v1alpha1.StateChaincodeFlowCompleted:
-		network.Status.Workflow = ""
-		r.setState(ctx, network, v1alpha1.StateReady, "Ready", "HL Fabric Network is ready")
+		r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{State: v1alpha1.StateReady, Message: "HL Fabric Network is ready"})
 		return ctrl.Result{Requeue: false}, nil
 	}
 
@@ -213,8 +210,10 @@ func (r *FabricNetworkReconciler) checkOthersInNamespace(ctx context.Context, ne
 	}
 
 	r.Log.Info("Rejecting FabricNetwork since there is more than one in the namespace")
-	if err := r.setState(ctx, network, v1alpha1.StateRejected, "MoreThanOneInNamespace",
-		"More than one FabricNetwork per namespace is not allowed"); err != nil {
+	if err := r.setStatus(ctx, network, v1alpha1.FabricNetworkStatus{
+		State:   v1alpha1.StateRejected,
+		Message: "More than one FabricNetwork per namespace is not allowed",
+	}); err != nil {
 
 		return false, err
 	}
@@ -228,10 +227,10 @@ func (r *FabricNetworkReconciler) validate(ctx context.Context, network *v1alpha
 	return nil
 }
 
-func (r *FabricNetworkReconciler) setState(ctx context.Context, network *v1alpha1.FabricNetwork, state v1alpha1.State, reason string, message string) error {
-	network.Status.State = state
-	network.Status.Reason = reason
-	network.Status.Message = message
+func (r *FabricNetworkReconciler) setStatus(ctx context.Context, network *v1alpha1.FabricNetwork, status v1alpha1.FabricNetworkStatus) error {
+	network.Status.State = status.State
+	network.Status.Message = status.Message
+	network.Status.Workflow = status.Workflow
 
 	if err := r.Status().Update(ctx, network); err != nil {
 		r.Log.Error(err, "Unable to update FabricNetwork status")

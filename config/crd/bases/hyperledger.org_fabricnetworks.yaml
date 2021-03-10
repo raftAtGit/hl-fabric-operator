@@ -45,8 +45,7 @@ spec:
                   to be in a ConfigMap hlf-chaincode--<chaincode name>
                 properties:
                   folder:
-                    description: Chaincode will be installed to all peers in these
-                      peer organizations
+                    description: Folder containing chaincode folders
                     type: string
                   language:
                     description: Programming language of chaincode. If defined, this
@@ -72,6 +71,20 @@ spec:
                   file:
                     type: string
                   secret:
+                    enum:
+                    - hlf-configtx.yaml
+                    type: string
+                type: object
+              crypto-config:
+                description: CryptoConfig is the source of crypto materials. either
+                  a Kubernetes Secret or a folder. If none provided Fabric Operator
+                  will create the crypto materials via cryptogen tool. The secret
+                  contains TAR archived crypto material in the field "crypto-config"
+                properties:
+                  folder:
+                    description: Folder containing crypto-material
+                    type: string
+                  secret:
                     type: string
                 type: object
               genesis:
@@ -82,6 +95,8 @@ spec:
                   file:
                     type: string
                   secret:
+                    enum:
+                    - hlf-genesis.block
                     type: string
                 type: object
               hlf-kube:
@@ -253,8 +268,6 @@ spec:
             description: FabricNetworkStatus defines the observed state of FabricNetwork
             properties:
               message:
-                type: string
-              reason:
                 type: string
               state:
                 type: string

@@ -88,7 +88,7 @@ func validateNewNetwork(ctx context.Context, cl client.Client, network *v1alpha1
 		return errors.New("Both Configtx.Secret and Configtx.File are provided, only either one is required")
 	}
 	if network.Spec.Configtx.Secret != "" && network.Spec.Configtx.Secret != "hlf-configtx.yaml" {
-		return errors.New("Configtx.Secret should be named 'hlf-configtx.yaml' (for now)")
+		return errors.New("Configtx.Secret should be named 'hlf-configtx.yaml'")
 	}
 	if network.Spec.Configtx.Secret == "" && !overwrite {
 		exists, err := secretExists(ctx, cl, namespace, "hlf-configtx.yaml")
@@ -100,8 +100,31 @@ func validateNewNetwork(ctx context.Context, cl client.Client, network *v1alpha1
 		}
 	}
 
+	if network.Spec.Configtx.Secret != "" {
+		exists, err := secretExists(ctx, cl, namespace, network.Spec.Configtx.Secret)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("Configtx.Secret %v does not exist in namespace %v", network.Spec.Configtx.Secret, namespace)
+		}
+	}
+
+	if network.Spec.Genesis.Secret != "" {
+		if network.Spec.Genesis.Secret != "hlf-genesis.block" {
+			return errors.New("Genesis.Secret should be named 'hlf-genesis.block'")
+		}
+		exists, err := secretExists(ctx, cl, namespace, network.Spec.Genesis.Secret)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("Genesis.Secret %v does not exist in namespace %v", network.Spec.Genesis.Secret, namespace)
+		}
+	}
+
 	if network.Spec.Chaincode.Folder == "" {
-		for _, chaincode := range network.Spec.Network.Chaincode {
+		for _, chaincode := range network.Spec.Network.Chaincodes {
 			name := "hlf-chaincode--" + chaincode.Name
 			exists, err := configMapExists(ctx, cl, namespace, name)
 			if err != nil {
@@ -172,13 +195,13 @@ func createOrUpdateConfigtxSecret(ctx context.Context, cl client.Client, network
 			fmt.Printf("configtx secret update failed: %v \n", err)
 			return err
 		}
-		info("updated configtx secret")
+		info("updated configtx Secret")
 	} else {
 		if err := cl.Create(ctx, secret); err != nil {
 			fmt.Printf("configtx secret creation failed: %v \n", err)
 			return err
 		}
-		info("created configtx secret")
+		info("created configtx Secret")
 	}
 	return nil
 }
@@ -193,14 +216,15 @@ func createOrUpdateChaincodeConfigMaps(ctx context.Context, cl client.Client, ne
 		debug("chaincode.folder is not absolute, merged path: %v", chaincodeFolder)
 	}
 
-	for _, chaincode := range network.Spec.Network.Chaincode {
+	for _, chaincode := range network.Spec.Network.Chaincodes {
+		debug("creating %v", strings.ToLower(chaincode.Name))
 		name := "hlf-chaincode--" + strings.ToLower(chaincode.Name)
 		exists, err := configMapExists(ctx, cl, namespace, name)
 		if err != nil {
 			return err
 		}
 		if exists && !overwrite {
-			return fmt.Errorf("A K8S ConfigMap with name %v already exists in namespace %v. Provide --overwrite flag to force overwrite", name, namespace)
+			return fmt.Errorf("A ConfigMap with name %v already exists in namespace %v. Provide --overwrite flag to force overwrite", name, namespace)
 		}
 
 		var buffer bytes.Buffer
@@ -225,16 +249,16 @@ func createOrUpdateChaincodeConfigMaps(ctx context.Context, cl client.Client, ne
 
 		if exists {
 			if err := cl.Update(ctx, configMap); err != nil {
-				fmt.Printf("chaincode configMap %v update failed: %v \n", name, err)
+				fmt.Printf("chaincode ConfigMap %v update failed: %v \n", name, err)
 				return err
 			}
-			info("updated chaincode configMap %v", name)
+			info("updated chaincode ConfigMap %v", name)
 		} else {
 			if err := cl.Create(ctx, configMap); err != nil {
-				fmt.Printf("chaincode configMap %v creation failed: %v \n", name, err)
+				fmt.Printf("chaincode ConfigMap %v creation failed: %v \n", name, err)
 				return err
 			}
-			info("created chaincode configMap %v", name)
+			info("created chaincode ConfigMap %v", name)
 		}
 	}
 
