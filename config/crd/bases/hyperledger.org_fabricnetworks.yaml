@@ -85,6 +85,8 @@ spec:
                     description: Folder containing crypto-material
                     type: string
                   secret:
+                    enum:
+                    - hlf-crypto-config
                     type: string
                 type: object
               genesis:

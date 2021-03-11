@@ -110,6 +110,12 @@ func validateNewNetwork(ctx context.Context, cl client.Client, network *v1alpha1
 		}
 	}
 
+	if network.Spec.Genesis.IsProvided() && !network.Spec.CryptoConfig.IsProvided() {
+		return errors.New("Genesis block is provided but CryptoConfig is not provided. Genesis block will not match generated certificates")
+	}
+	if network.Spec.Genesis.Secret != "" && network.Spec.Genesis.File != "" {
+		return errors.New("Both Genesis.Secret and Genesis.File are provided, at most one is allowed")
+	}
 	if network.Spec.Genesis.Secret != "" {
 		if network.Spec.Genesis.Secret != "hlf-genesis.block" {
 			return errors.New("Genesis.Secret should be named 'hlf-genesis.block'")
@@ -123,8 +129,9 @@ func validateNewNetwork(ctx context.Context, cl client.Client, network *v1alpha1
 		}
 	}
 
-	if network.Spec.Chaincode.Folder == "" {
-		for _, chaincode := range network.Spec.Network.Chaincodes {
+	for _, chaincode := range network.Spec.Network.Chaincodes {
+
+		if network.Spec.Chaincode.Folder == "" {
 			name := "hlf-chaincode--" + chaincode.Name
 			exists, err := configMapExists(ctx, cl, namespace, name)
 			if err != nil {
@@ -133,6 +140,33 @@ func validateNewNetwork(ctx context.Context, cl client.Client, network *v1alpha1
 			if !exists {
 				return fmt.Errorf("Chaincode ConfigMap %v does not exist in namespace %v", name, namespace)
 			}
+		}
+
+		if network.Spec.Chaincode.Language == "" && chaincode.Language == "" {
+			return fmt.Errorf("Global chaincode language is not specified. Language for chaincode %v is required", chaincode.Name)
+		}
+
+		if network.Spec.Chaincode.Version == "" && chaincode.Version == "" {
+			return fmt.Errorf("Global chaincode version is not specified. Version for chaincode %v is required", chaincode.Name)
+		}
+	}
+
+	if network.Spec.CryptoConfig.Secret != "" && network.Spec.CryptoConfig.Folder != "" {
+		return errors.New("Both CryptoConfig.Secret and CryptoConfig.Folder are provided, at most one is allowed")
+	}
+	if network.Spec.CryptoConfig.Folder != "" {
+		return errors.New("CryptoConfig.Folder is not implemented yet")
+	}
+	if network.Spec.CryptoConfig.Secret != "" {
+		if network.Spec.CryptoConfig.Secret != "hlf-crypto-config" {
+			return errors.New("CryptoConfig.Secret should be named 'hlf-crypto-config'")
+		}
+		exists, err := secretExists(ctx, cl, namespace, network.Spec.CryptoConfig.Secret)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("CryptoConfig.Secret %v does not exist in namespace %v", network.Spec.CryptoConfig.Secret, namespace)
 		}
 	}
 
@@ -195,13 +229,13 @@ func createOrUpdateConfigtxSecret(ctx context.Context, cl client.Client, network
 			fmt.Printf("configtx secret update failed: %v \n", err)
 			return err
 		}
-		info("updated configtx Secret")
+		info("updated configtx Secret hlf-configtx.yaml")
 	} else {
 		if err := cl.Create(ctx, secret); err != nil {
 			fmt.Printf("configtx secret creation failed: %v \n", err)
 			return err
 		}
-		info("created configtx Secret")
+		info("created configtx Secret hlf-configtx.yaml")
 	}
 	return nil
 }
@@ -237,7 +271,7 @@ func createOrUpdateChaincodeConfigMaps(ctx context.Context, cl client.Client, ne
 				Name:      name,
 				Namespace: namespace,
 				Labels: map[string]string{
-					"chaincodeName": name,
+					"chaincodeName": chaincode.Name,
 					"type":          "chaincode",
 					"raft.io/fabric-operator-cli-created-for": network.Name,
 				},

@@ -42,6 +42,53 @@ func (r *FabricNetworkReconciler) prepareHelmChart(ctx context.Context, network 
 		return err
 	}
 
+	if err := r.createHelmChartDir(ctx, network); err != nil {
+		r.Log.Error(err, "Create chart dir failed")
+		return err
+	}
+
+	if err := r.prepareChartDirForFabric(ctx, network, freshInstall); err != nil {
+		r.Log.Error(err, "Prepare chart dir failed")
+		return err
+	}
+
+	return nil
+}
+
+func (r *FabricNetworkReconciler) maybeReconstructHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork) error {
+	networkDir := getNetworkDir(network)
+	if _, err := os.Stat(networkDir); !os.IsNotExist(err) {
+		// networkDir exists
+		return nil
+	}
+
+	switch network.Status.State {
+	case "":
+	case v1alpha1.StateNew:
+	case v1alpha1.StateRejected:
+	case v1alpha1.StateInvalid:
+	case v1alpha1.StateFailed:
+		return nil
+	}
+
+	r.Log.Info("networkDir does not exist, will reconstruct", "networkDir", networkDir, "state", network.Status.State)
+
+	if err := r.createHelmChartDir(ctx, network); err != nil {
+		r.Log.Error(err, "Create chart dir failed")
+		return err
+	}
+
+	if err := r.prepareChartDirForFabric(ctx, network, reconstruct); err != nil {
+		r.Log.Error(err, "Prepare chart dir failed")
+		return err
+	}
+
+	return nil
+}
+
+func (r *FabricNetworkReconciler) createHelmChartDir(ctx context.Context, network *v1alpha1.FabricNetwork) error {
+	networkDir := getNetworkDir(network)
+
 	if err := copyDir(settings.PivtDir+"/fabric-kube/hlf-kube", networkDir); err != nil {
 		r.Log.Error(err, "Couldnt copy hlf-kube folder to network dir", "networkDir", networkDir)
 		return err
@@ -53,6 +100,11 @@ func (r *FabricNetworkReconciler) prepareHelmChart(ctx context.Context, network 
 		return err
 	}
 	r.Log.Info("Wrote network to file", "file", file, "network", netContainer)
+
+	if err := r.createValuesFiles(ctx, network); err != nil {
+		r.Log.Error(err, "Couldnt create values files")
+		return err
+	}
 
 	if err := os.MkdirAll(networkDir+"/channel-artifacts", 0755); err != nil {
 		return err
@@ -70,11 +122,6 @@ func (r *FabricNetworkReconciler) prepareHelmChart(ctx context.Context, network 
 	}
 	r.Log.Info("Wrote configtx to file", "file", configtxFile)
 
-	if err := r.prepareChartDirForFabric(ctx, network); err != nil {
-		r.Log.Error(err, "Prepare chart dir failed")
-		return err
-	}
-
 	return nil
 }
 
@@ -89,11 +136,6 @@ func (r *FabricNetworkReconciler) installHelmChart(ctx context.Context, network 
 		return err
 	}
 
-	if err := r.createValuesFiles(ctx, network); err != nil {
-		r.Log.Error(err, "Couldnt create values files")
-		return err
-	}
-
 	extraValues := []string{}
 	if network.Spec.Topology.UseActualDomains {
 		extraValues = []string{
@@ -101,7 +143,7 @@ func (r *FabricNetworkReconciler) installHelmChart(ctx context.Context, network 
 			"orderer.launchPods=false",
 		}
 	}
-	values, err := r.getChartValues(network, settings, "hlf-kube-values.yaml", extraValues...)
+	values, err := r.getChartValues(ctx, network, settings, "hlf-kube-values.yaml", extraValues...)
 	if err != nil {
 		return err
 	}
@@ -132,12 +174,7 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 		return err
 	}
 
-	if err := r.createValuesFiles(ctx, network); err != nil {
-		r.Log.Error(err, "Couldnt create values files")
-		return err
-	}
-
-	values, err := r.getChartValues(network, settings, "hlf-kube-values.yaml")
+	values, err := r.getChartValues(ctx, network, settings, "hlf-kube-values.yaml")
 	if err != nil {
 		r.Log.Error(err, "Couldnt get chart values")
 		return err
@@ -231,13 +268,8 @@ func (r *FabricNetworkReconciler) renderHelmChart(ctx context.Context, network *
 		return "", err
 	}
 
-	if err := r.createValuesFiles(ctx, network); err != nil {
-		r.Log.Error(err, "Couldnt create values files")
-		return "", err
-	}
-
 	extraValues := []string{}
-	values, err := r.getChartValues(network, settings, valuesFile, extraValues...)
+	values, err := r.getChartValues(ctx, network, settings, valuesFile, extraValues...)
 	if err != nil {
 		return "", err
 	}
@@ -311,7 +343,12 @@ func getNetworkDir(network *v1alpha1.FabricNetwork) string {
 	return settings.NetworkDir + "/" + network.Namespace + "/" + network.Name
 }
 
-func (r *FabricNetworkReconciler) getChartValues(network *v1alpha1.FabricNetwork, settings *cli.EnvSettings, valuesFile string, extraValues ...string) (map[string]interface{}, error) {
+func (r *FabricNetworkReconciler) getChartValues(ctx context.Context, network *v1alpha1.FabricNetwork, settings *cli.EnvSettings, valuesFile string, extraValues ...string) (map[string]interface{}, error) {
+	if err := r.createOperatorValuesFile(ctx, network); err != nil {
+		r.Log.Error(err, "Couldnt create operator values")
+		return nil, err
+	}
+
 	valueOpts := &values.Options{}
 	valueOpts.ValueFiles = []string{
 		// TODO
@@ -355,6 +392,16 @@ func (r *FabricNetworkReconciler) createValuesFiles(ctx context.Context, network
 	if err := r.createValuesFile(network.Spec.ChaincodeFlow.Raw, networkDir+"/chaincode-flow-values.yaml"); err != nil {
 		return err
 	}
+
+	if err := r.createOperatorValuesFile(ctx, network); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *FabricNetworkReconciler) createOperatorValuesFile(ctx context.Context, network *v1alpha1.FabricNetwork) error {
+	networkDir := getNetworkDir(network)
 
 	hostAliases, err := r.getHostAliases(ctx, network)
 	if err != nil {

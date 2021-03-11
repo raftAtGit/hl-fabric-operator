@@ -73,8 +73,13 @@ func (r *FabricNetworkReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return ctrl.Result{}, err
 	}
 
-	r.Log.Info("Got the FabricNetwork", "network", network.Spec, "state", network.Status.State)
+	r.Log.Info("Got the FabricNetwork", "network", network.Name, "state", network.Status.State)
 	// fmt.Printf("hlf-kube %T, %v \n", network.Spec.HlfKube, network.Spec.HlfKube.Object)
+
+	if err := r.maybeReconstructHelmChart(ctx, network); err != nil {
+		r.Log.Error(err, "Reconstructing Helm chart failed")
+		return ctrl.Result{}, err
+	}
 
 	switch network.Status.State {
 	case "":

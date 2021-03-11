@@ -97,6 +97,11 @@ type Genesis struct {
 	Secret string `json:"secret,omitempty"`
 }
 
+// IsProvided returns true either File or Secret is not empty string
+func (g Genesis) IsProvided() bool {
+	return g.File != "" || g.Secret != ""
+}
+
 // CryptoConfig is the source of crypto materials. either a Kubernetes Secret or a folder.
 // If none provided Fabric Operator will create the crypto materials via cryptogen tool.
 // The secret contains TAR archived crypto material in the field "crypto-config"
@@ -105,6 +110,11 @@ type CryptoConfig struct {
 	Folder string `json:"folder,omitempty"`
 	// +kubebuilder:validation:Enum=hlf-crypto-config
 	Secret string `json:"secret,omitempty"`
+}
+
+// IsProvided returns true either Folder or Secret is not empty string
+func (c CryptoConfig) IsProvided() bool {
+	return c.Folder != "" || c.Secret != ""
 }
 
 // ChaincodeConfig is the global chaincode settings and source of chaincode sources.
