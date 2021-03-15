@@ -9,6 +9,12 @@ spec:
     file: configtx.yaml # see CLI for usage
     # secret: hlf-configtx.yaml
 
+  chaincode:
+    version: "1.0"
+    language: node
+    folder: ../chaincode # see CLI for usage
+    # configMaps: implied list
+
   # source of the genesis block. either a Kubernetes Secret or a file.
   # if none provided Fabric Operator will create the genesis block
   genesis: {}
@@ -19,18 +25,13 @@ spec:
   # if none provided Fabric Operator will create the crypto materials via cryptogen tool.
   # the secret contains TAR archived crypto material
   crypto-config: {}
-    # folder: /path/to/crypto-config/folder
+    # folder: ./crypto-config
     # secret: hlf-crypto-config
 
-  chaincode:
-    version: "1.0"
-    # language: node
-    folder: ../chaincode # see CLI for usage
-    # configMaps: implied list
-
+  # adds additional DNS entries to /etc/hosts files of pods
+  # this is provided for communication with external peers/orderers
+  # if useActualDomains is true, Fabric Operator will still create internal hostAliases and append to this one
   hostAliases: 
-  - ip: 10.0.240.0
-    hostnames: [siksok.nl]
 
   # topology of the Fabric network managed by Fabric Operator
   # also contains some top level properties which is applied to whole network
@@ -68,7 +69,7 @@ spec:
   network:
     # used to create genesis block and by peer-org-flow to parse consortiums
     genesisProfile: OrdererGenesis
-    # used by init script to create genesis block 
+    # used to create genesis block 
     systemChannelID: testchainid
 
     # defines which organizations will join to which channels
@@ -107,9 +108,6 @@ spec:
 
   # additional settings passed to relevant Helm charts
   # see each chart's values.yaml file for details
-  # in this part some validation or filtering is critical, to make sure no provided value
-  # conflicts with top level values. for example: tlsEnabled
-  # or with Fabric Operator created values for example: hlf-kube.chaincode.excludeAll or chaincode-flow.flow.chaincode.include
   hlf-kube: 
     peer:
       docker:

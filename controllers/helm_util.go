@@ -17,7 +17,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -94,13 +93,6 @@ func (r *FabricNetworkReconciler) createHelmChartDir(ctx context.Context, networ
 		return err
 	}
 
-	netContainer := networkContainer{Network: network.Spec.Network}
-	file := networkDir + "/network.yaml"
-	if err := writeYamlToFile(netContainer, file); err != nil {
-		return err
-	}
-	r.Log.Info("Wrote network to file", "file", file, "network", netContainer)
-
 	if err := r.createValuesFiles(ctx, network); err != nil {
 		r.Log.Error(err, "Couldnt create values files")
 		return err
@@ -109,18 +101,6 @@ func (r *FabricNetworkReconciler) createHelmChartDir(ctx context.Context, networ
 	if err := os.MkdirAll(networkDir+"/channel-artifacts", 0755); err != nil {
 		return err
 	}
-
-	secret := &corev1.Secret{}
-	if err := r.Get(ctx, types.NamespacedName{Name: network.Spec.Configtx.Secret, Namespace: network.Namespace}, secret); err != nil {
-		r.Log.Error(err, "Couldnt get configtx secret", "configtx", network.Spec.Configtx.Secret)
-		return err
-	}
-	configtxFile := networkDir + "/configtx.yaml"
-	if err := ioutil.WriteFile(configtxFile, secret.Data["configtx.yaml"], 0644); err != nil {
-		r.Log.Error(err, "Couldnt write configtx to file")
-		return err
-	}
-	r.Log.Info("Wrote configtx to file", "file", configtxFile)
 
 	return nil
 }
@@ -143,7 +123,7 @@ func (r *FabricNetworkReconciler) installHelmChart(ctx context.Context, network 
 			"orderer.launchPods=false",
 		}
 	}
-	values, err := r.getChartValues(ctx, network, settings, "hlf-kube-values.yaml", extraValues...)
+	values, err := r.getChartValues(ctx, network, settings, []string{"hlf-kube-values.yaml"}, extraValues)
 	if err != nil {
 		return err
 	}
@@ -174,7 +154,7 @@ func (r *FabricNetworkReconciler) updateHelmChart(ctx context.Context, network *
 		return err
 	}
 
-	values, err := r.getChartValues(ctx, network, settings, "hlf-kube-values.yaml")
+	values, err := r.getChartValues(ctx, network, settings, []string{"hlf-kube-values.yaml"}, nil)
 	if err != nil {
 		r.Log.Error(err, "Couldnt get chart values")
 		return err
@@ -251,15 +231,31 @@ func loadHelmChart(network *v1alpha1.FabricNetwork) (*hchart.Chart, error) {
 
 func (r *FabricNetworkReconciler) renderChannelFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
 	chartDir := settings.PivtDir + "/fabric-kube/channel-flow/"
-	return r.renderHelmChart(ctx, network, chartDir, "channel-flow-values.yaml")
+	return r.renderHelmChart(ctx, network, chartDir, []string{"channel-flow-values.yaml"}, nil)
 }
 
-func (r *FabricNetworkReconciler) renderChaincodeFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
+func (r *FabricNetworkReconciler) renderChaincodeFlow(ctx context.Context, network *v1alpha1.FabricNetwork, includeChaincodes []string) (string, error) {
 	chartDir := settings.PivtDir + "/fabric-kube/chaincode-flow/"
-	return r.renderHelmChart(ctx, network, chartDir, "chaincode-flow-values.yaml")
+
+	extraValues := []string{
+		"chaincode.version=" + network.Spec.Chaincode.Version,
+		"chaincode.language=" + network.Spec.Chaincode.Language,
+	}
+	if len(includeChaincodes) != 0 {
+		extraValues = append(extraValues, "flow.chaincode.include={"+strings.Join(includeChaincodes, ",")+"}")
+	}
+
+	return r.renderHelmChart(ctx, network, chartDir, []string{"chaincode-flow-values.yaml"}, extraValues)
 }
 
-func (r *FabricNetworkReconciler) renderHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork, chartDir string, valuesFile string) (string, error) {
+func (r *FabricNetworkReconciler) renderPeerOrgFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
+	chartDir := settings.PivtDir + "/fabric-kube/peer-org-flow/"
+	return r.renderHelmChart(ctx, network, chartDir, []string{"peer-org-flow-values.yaml", "configtx.yaml"}, nil)
+}
+
+func (r *FabricNetworkReconciler) renderHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork,
+	chartDir string, valuesFiles []string, extraValues []string) (string, error) {
+
 	settings := cli.New()
 	actionConfig := new(action.Configuration)
 
@@ -268,8 +264,7 @@ func (r *FabricNetworkReconciler) renderHelmChart(ctx context.Context, network *
 		return "", err
 	}
 
-	extraValues := []string{}
-	values, err := r.getChartValues(ctx, network, settings, valuesFile, extraValues...)
+	values, err := r.getChartValues(ctx, network, settings, valuesFiles, extraValues)
 	if err != nil {
 		return "", err
 	}
@@ -283,7 +278,7 @@ func (r *FabricNetworkReconciler) renderHelmChart(ctx context.Context, network *
 	// client.APIVersions = chartutil.VersionSet(extraAPIs)
 	client.IncludeCRDs = false
 
-	r.Log.Info("Rendering Helm chart", "path", chartDir)
+	r.Log.Info("Rendering Helm chart", "path", chartDir, "extraValues", extraValues, "values", values)
 	release, err := client.Run(chart, values)
 	if err != nil {
 		return "", err
@@ -343,7 +338,7 @@ func getNetworkDir(network *v1alpha1.FabricNetwork) string {
 	return settings.NetworkDir + "/" + network.Namespace + "/" + network.Name
 }
 
-func (r *FabricNetworkReconciler) getChartValues(ctx context.Context, network *v1alpha1.FabricNetwork, settings *cli.EnvSettings, valuesFile string, extraValues ...string) (map[string]interface{}, error) {
+func (r *FabricNetworkReconciler) getChartValues(ctx context.Context, network *v1alpha1.FabricNetwork, settings *cli.EnvSettings, valuesFiles []string, extraValues []string) (map[string]interface{}, error) {
 	if err := r.createOperatorValuesFile(ctx, network); err != nil {
 		r.Log.Error(err, "Couldnt create operator values")
 		return nil, err
@@ -351,12 +346,12 @@ func (r *FabricNetworkReconciler) getChartValues(ctx context.Context, network *v
 
 	valueOpts := &values.Options{}
 	valueOpts.ValueFiles = []string{
-		// TODO
 		getNetworkDir(network) + "/network.yaml",
 		getNetworkDir(network) + "/crypto-config.yaml",
-
-		getNetworkDir(network) + "/" + valuesFile,
 		getNetworkDir(network) + "/operator-values.yaml",
+	}
+	for _, vf := range valuesFiles {
+		valueOpts.ValueFiles = append(valueOpts.ValueFiles, getNetworkDir(network)+"/"+vf)
 	}
 	genesisProvided := false
 	if network.Spec.Genesis.Secret != "" {
@@ -371,6 +366,9 @@ func (r *FabricNetworkReconciler) getChartValues(ctx context.Context, network *v
 		"secret.configtx=false",
 		"secret.genesis=" + strconv.FormatBool(!genesisProvided),
 	}, extraValues...)
+	// if extraValues != nil {
+	// 	valueOpts.Values = append(valueOpts.Values, extraValues...)
+	// }
 	r.Log.Info("Values", "valueOpts", valueOpts)
 
 	providers := getter.All(settings)
@@ -383,6 +381,15 @@ func (r *FabricNetworkReconciler) getChartValues(ctx context.Context, network *v
 func (r *FabricNetworkReconciler) createValuesFiles(ctx context.Context, network *v1alpha1.FabricNetwork) error {
 	networkDir := getNetworkDir(network)
 
+	if err := r.createConfigtxFile(ctx, network); err != nil {
+		return err
+	}
+	if err := r.createCryptoConfigFile(ctx, network); err != nil {
+		return err
+	}
+	if err := r.createNetworkValuesFile(ctx, network); err != nil {
+		return err
+	}
 	if err := r.createValuesFile(network.Spec.HlfKube.Raw, networkDir+"/hlf-kube-values.yaml"); err != nil {
 		return err
 	}
@@ -392,10 +399,24 @@ func (r *FabricNetworkReconciler) createValuesFiles(ctx context.Context, network
 	if err := r.createValuesFile(network.Spec.ChaincodeFlow.Raw, networkDir+"/chaincode-flow-values.yaml"); err != nil {
 		return err
 	}
-
+	if err := r.createValuesFile(network.Spec.PeerOrgFlow.Raw, networkDir+"/peer-org-flow-values.yaml"); err != nil {
+		return err
+	}
 	if err := r.createOperatorValuesFile(ctx, network); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (r *FabricNetworkReconciler) createNetworkValuesFile(ctx context.Context, network *v1alpha1.FabricNetwork) error {
+	networkDir := getNetworkDir(network)
+
+	netContainer := networkContainer{Network: network.Spec.Network}
+	file := networkDir + "/network.yaml"
+	if err := writeYamlToFile(netContainer, file); err != nil {
+		return err
+	}
+	r.Log.Info("Wrote network to file", "file", file, "network", netContainer)
 
 	return nil
 }

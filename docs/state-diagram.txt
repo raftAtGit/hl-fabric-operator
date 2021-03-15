@@ -1,0 +1,61 @@
+@startuml
+'Open with http://www.plantuml.com/
+
+state None : Initial state when \n first submitted to K8S
+state New : Delete everything if they exist \n and start from scratch
+state Ready
+state Rejected
+state Invalid
+state Failed
+state HelmChartInstalled
+state HelmChartNeedsUpdate
+state HelmChartNeedsDoubleUpdate
+state HelmChartReady
+state ChannelFlowSubmitted
+state ChannelFlowCompleted
+state ChaincodeFlowSubmitted
+state ChaincodeFlowCompleted
+state PeerOrgFlowSubmitted
+state PeerOrgFlowCompleted
+
+
+hide empty description
+[*] --> None
+None -right-> Invalid : Validation failed
+None -left-> Rejected : There are other FabricNetwork(s) \n in the namespace
+None --> New : Save Topology, Channels and \n Chaincodes to Status 
+
+Rejected --> [*]
+Invalid --> [*]
+Failed --> [*]
+
+New --> HelmChartInstalled : UseActualDomains != true \n Install Helm chart
+New --> HelmChartNeedsUpdate : UseActualDomains == true \n Install Helm chart
+
+HelmChartNeedsUpdate --> HelmChartInstalled : Collect HostAliases \n and update Helm chart
+HelmChartInstalled --> HelmChartReady : All components are ready
+HelmChartNeedsDoubleUpdate --> HelmChartInstalled : Update Helm chart, \n if UseActualDomains == true \n collect HostAliases \n and update again
+HelmChartReady -right-> New : Topology changed? \n Save Topology, Channels and \n Chaincodes to Status 
+HelmChartReady --> ChannelFlowSubmitted : NextFlow == "". \n Submit Argo channel-flow
+HelmChartReady --> Ready : NextFlow == None \n Clear NextFlow
+HelmChartReady --> PeerOrgFlowSubmitted : NextFlow == PeerOrgFlow \n Submit Argo peer-org-flow
+
+ChannelFlowSubmitted --> Failed : channel-flow failed
+ChannelFlowSubmitted --> ChannelFlowCompleted
+ChannelFlowCompleted --> ChaincodeFlowSubmitted : Submit Argo chaincode-flow
+
+ChaincodeFlowSubmitted --> Failed : chaincode-flow failed
+ChaincodeFlowSubmitted --> ChaincodeFlowCompleted
+ChaincodeFlowCompleted --> Ready
+
+Ready --> ChannelFlowSubmitted : Channels changed \n Submit Argo channel-flow
+Ready --> ChaincodeFlowSubmitted : Chaincodes changed \n Submit Argo chaincode-flow
+Ready -right-> HelmChartNeedsUpdate : Peer counts in topology increased \n Download or extend certificates 
+Ready -right-> HelmChartNeedsUpdate : Peer counts in topology decreased \n or Fabric version changed \n Set NextFlow=None
+Ready --> HelmChartNeedsDoubleUpdate: Peer orgs in tolopology changed \n Download or extend certificates \nSet NextFlow=PeerOrgFlow
+Ready --> HelmChartNeedsDoubleUpdate: Orderer orgs in tolopology changed \n Download or extend certificates \nSet NextFlow=None \n Emit warning!
+
+PeerOrgFlowSubmitted --> Failed : peer-org-flow failed
+PeerOrgFlowSubmitted --> PeerOrgFlowCompleted
+PeerOrgFlowCompleted -right-> ChannelFlowSubmitted : Submit Argo channel-flow
+@enduml

@@ -1,7 +1,7 @@
 apiVersion: hyperledger.org/v1alpha1
 kind: FabricNetwork
 metadata:
-  name: scaled-kafka
+  name: simple
 spec:
 
   # source of the configtx.yaml file. either a Kubernetes Secret or a file.
@@ -11,7 +11,7 @@ spec:
 
   chaincode:
     version: "1.0"
-    # language: node
+    language: node
     folder: ../chaincode # see CLI for usage
     # configMaps: implied list
 
@@ -31,13 +31,13 @@ spec:
   # adds additional DNS entries to /etc/hosts files of pods
   # this is provided for communication with external peers/orderers
   # if useActualDomains is true, Fabric Operator will still create internal hostAliases and append to this one
-  hostAliases: 
+  hostAliases:
 
   # topology of the Fabric network managed by Fabric Operator
   # also contains some top level properties which is applied to whole network
   topology:
     # Hyperledger Fabric Version
-    version: 1.4.9  
+    version: 1.4.9
     # TLS enabled?
     tlsEnabled: false
     # use actual domain names like peer0.atlantis.com instead of internal service names
@@ -53,18 +53,18 @@ spec:
     peerOrgs:
       - name: Karga
         domain: aptalkarga.tr
-        peerCount: 2
+        peerCount: 1
       - name: Nevergreen
         domain: nevergreen.nl
-        peerCount: 2
+        peerCount: 1
       - name: Atlantis
         domain: atlantis.com
-        peerCount: 2
+        peerCount: 1
 
   network:
     # used to create genesis block and by peer-org-flow to parse consortiums
     genesisProfile: OrdererGenesis
-    # used by init script to create genesis block 
+    # used to create genesis block 
     systemChannelID: testchainid
 
     # defines which organizations will join to which channels
@@ -104,10 +104,6 @@ spec:
   # additional settings passed to relevant Helm charts
   # see each chart's values.yaml file for details
   hlf-kube: 
-    hlf-kafka:
-      enabled: true
-    orderer:
-      replicas: 3
     peer:
       docker:
         dind: 
@@ -115,6 +111,6 @@ spec:
           enabled: true
   channel-flow: {}
   chaincode-flow: {}
-  # peer-org-flow:
+  peer-org-flow: {}
   # backup-flow:
   # restore-flow:

@@ -15,8 +15,7 @@ It’s not required for normal operation of Fabric Operator but provided as a to
 It performs client-side validation and creates necessary resources in Kubernetes on the fly. 
 
 By using CLI, it's possible to specify supplementary inputs as references to the local file system. 
-For example if chaincode.folder is provided in the FabricNetwork CRD like below, CLI will create chaincode ConfigMaps 
-before submitting the FabricNetwork to Kubernetes.
+For example if chaincode.folder is provided in the FabricNetwork CRD like below, CLI will create chaincode ConfigMaps before submitting the FabricNetwork to Kubernetes.
 
 chaincode:
   folder: ../chaincode
@@ -38,7 +37,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "K8S namespace")
+	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Kubernetes namespace")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
 
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")

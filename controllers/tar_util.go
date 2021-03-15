@@ -30,10 +30,10 @@ func compress(parentFolder string, childFolder string, buf io.Writer) error {
 			return err
 		}
 
-		// must provide real name
-		// (see https://golang.org/src/archive/tar/common.go?#L626)
-		// header.Name = filepath.ToSlash(file)
 		header.Name = strings.TrimPrefix(filepath.ToSlash(file), parentFolder+"/")
+		if header.Name == "" {
+			return nil
+		}
 
 		// write header
 		if err := tw.WriteHeader(header); err != nil {
@@ -83,7 +83,7 @@ func uncompress(src io.Reader, dst string) error {
 
 		// validate name against path traversal
 		if !validRelPath(header.Name) {
-			return fmt.Errorf("tar contained invalid name error %v", header.Name)
+			return fmt.Errorf("tar contained invalid name: %v", header.Name)
 		}
 
 		// add dst + re-format slashes according to system

@@ -58,15 +58,6 @@ func (r *FabricNetworkReconciler) prepareChartDirForFabric(ctx context.Context, 
 
 	networkDir := getNetworkDir(network)
 
-	cryptoConfig := newCryptoConfig(network)
-	r.Log.Info("Created cryptoConfig", "cryptoConfig", cryptoConfig)
-
-	file := networkDir + "/crypto-config.yaml"
-	if err := writeYamlToFile(cryptoConfig, file); err != nil {
-		return err
-	}
-	r.Log.Info("Wrote cryptoConfig to file", "file", file)
-
 	if !isFreshInstall || network.Spec.CryptoConfig.Secret != "" {
 		if isFreshInstall {
 			r.Log.Info("CryptoConfig.Secret is provided. Downloading certificates from secret", "CryptoConfig.Secret", network.Spec.CryptoConfig.Secret)
@@ -80,11 +71,12 @@ func (r *FabricNetworkReconciler) prepareChartDirForFabric(ctx context.Context, 
 			return err
 		}
 
+		folder := networkDir + "/crypto-config"
 		buf := bytes.NewBuffer(secret.Data["crypto-config"])
-		if err := uncompress(buf, networkDir); err != nil {
+		if err := uncompress(buf, folder); err != nil {
 			return err
 		}
-		r.Log.Info("Downloaded and uncompressed certificates from secret", "secret", cryptoConfigSecret, "folder", networkDir)
+		r.Log.Info("Downloaded and uncompressed certificates from secret", "secret", cryptoConfigSecret, "folder", folder)
 
 	} else {
 		r.Log.Info("Creating certificates", "network", network.Name)
@@ -137,6 +129,77 @@ func (r *FabricNetworkReconciler) prepareChartDirForFabric(ctx context.Context, 
 	return nil
 }
 
+func (r *FabricNetworkReconciler) extendOrDownloadCertificates(ctx context.Context, network *v1alpha1.FabricNetwork) error {
+	networkDir := getNetworkDir(network)
+
+	if network.Spec.CryptoConfig.Secret != "" {
+		r.Log.Info("CryptoConfig.Secret is provided. Downloading certificates from secret", "CryptoConfig.Secret", network.Spec.CryptoConfig.Secret)
+
+		secret := &corev1.Secret{}
+		err := r.Get(ctx, types.NamespacedName{Namespace: network.Namespace, Name: cryptoConfigSecret}, secret)
+		if err != nil {
+			return err
+		}
+
+		folder := networkDir + "/crypto-config"
+		buf := bytes.NewBuffer(secret.Data["crypto-config"])
+		if err := uncompress(buf, folder); err != nil {
+			return err
+		}
+		r.Log.Info("Downloaded and uncompressed certificates from secret", "secret", cryptoConfigSecret, "folder", folder)
+
+	} else {
+		r.Log.Info("Extending certificates", "network", network.Name)
+		// cryptogen extend --config ./crypto-config.yaml --input crypto-config
+		cmd := exec.CommandContext(ctx, "cryptogen", "extend", "--config", "./crypto-config.yaml", "--input", "crypto-config")
+		cmd.Dir = networkDir
+		output, err := cmd.CombinedOutput()
+
+		r.Log.Info("cryptogen completed", "err", err, "output", string(output))
+		if err != nil {
+			return err
+		}
+
+		if err = r.storeCryptoConfig(ctx, network); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *FabricNetworkReconciler) createConfigtxFile(ctx context.Context, network *v1alpha1.FabricNetwork) error {
+	networkDir := getNetworkDir(network)
+
+	secret := &corev1.Secret{}
+	if err := r.Get(ctx, types.NamespacedName{Name: network.Spec.Configtx.Secret, Namespace: network.Namespace}, secret); err != nil {
+		r.Log.Error(err, "Couldnt get configtx secret", "configtx", network.Spec.Configtx.Secret)
+		return err
+	}
+
+	configtxFile := networkDir + "/configtx.yaml"
+	if err := ioutil.WriteFile(configtxFile, secret.Data["configtx.yaml"], 0644); err != nil {
+		r.Log.Error(err, "Couldnt write configtx to file")
+		return err
+	}
+	r.Log.Info("Wrote configtx to file", "file", configtxFile)
+	return nil
+}
+
+func (r *FabricNetworkReconciler) createCryptoConfigFile(ctx context.Context, network *v1alpha1.FabricNetwork) error {
+	networkDir := getNetworkDir(network)
+
+	cryptoConfig := newCryptoConfig(network)
+	r.Log.Info("Created cryptoConfig", "cryptoConfig", cryptoConfig)
+
+	file := networkDir + "/crypto-config.yaml"
+	if err := writeYamlToFile(cryptoConfig, file); err != nil {
+		return err
+	}
+	r.Log.Info("Wrote cryptoConfig to file", "file", file)
+
+	return nil
+}
+
 func newCryptoConfig(network *v1alpha1.FabricNetwork) cryptoConfig {
 	c := cryptoConfig{}
 
@@ -172,7 +235,7 @@ func (r *FabricNetworkReconciler) storeCryptoConfig(ctx context.Context, network
 	networkDir := getNetworkDir(network)
 
 	var buffer bytes.Buffer
-	if err := compress(networkDir, "crypto-config", &buffer); err != nil {
+	if err := compress(networkDir+"/crypto-config", "", &buffer); err != nil {
 		return err
 	}
 
@@ -191,10 +254,22 @@ func (r *FabricNetworkReconciler) storeCryptoConfig(ctx context.Context, network
 	// set owner to FabricNetwork, so when network is deleted Secret is also deleted
 	ctrl.SetControllerReference(network, secret, r.Scheme)
 
-	if err := r.Create(ctx, secret); err != nil {
+	exists, err := r.secretExists(ctx, secret.Namespace, secret.Name)
+	if err != nil {
 		return err
 	}
-	r.Log.Info("Stored crypto-config in secret", "secret", secret.Name)
+
+	if exists {
+		if err := r.Update(ctx, secret); err != nil {
+			return err
+		}
+		r.Log.Info("Stored crypto-config in updated secret", "secret", secret.Name)
+	} else {
+		if err := r.Create(ctx, secret); err != nil {
+			return err
+		}
+		r.Log.Info("Stored crypto-config in new secret", "secret", secret.Name)
+	}
 
 	return nil
 }

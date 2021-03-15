@@ -35,10 +35,21 @@ func (r *FabricNetworkReconciler) startChannelFlow(ctx context.Context, network 
 	return r.submitWorkflow(network, wfManifest)
 }
 
-func (r *FabricNetworkReconciler) startChaincodeFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
-	wfManifest, err := r.renderChaincodeFlow(ctx, network)
+// empty array for includeChaincodes means, all chaincodes
+func (r *FabricNetworkReconciler) startChaincodeFlow(ctx context.Context, network *v1alpha1.FabricNetwork, includeChaincodes []string) (string, error) {
+	wfManifest, err := r.renderChaincodeFlow(ctx, network, includeChaincodes)
 	if err != nil {
 		r.Log.Error(err, "Rendering chaincode-flow failed")
+		return "", err
+	}
+
+	return r.submitWorkflow(network, wfManifest)
+}
+
+func (r *FabricNetworkReconciler) startPeerOrgFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
+	wfManifest, err := r.renderPeerOrgFlow(ctx, network)
+	if err != nil {
+		r.Log.Error(err, "Rendering peer-org-flow failed")
 		return "", err
 	}
 

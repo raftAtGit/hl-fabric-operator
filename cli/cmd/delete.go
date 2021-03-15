@@ -16,7 +16,7 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete FABRIC_NETWORK_NAME",
 	Args:  cobra.ExactArgs(1),
 	Short: "Delete a FabricNetwork",
-	Long:  `Delete a FabricNetwork from K8S cluster`,
+	Long:  `Delete a FabricNetwork from Kubernetes cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, client := apiClient.NewClient()
 
@@ -29,7 +29,7 @@ var deleteCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(deleteCmd)
 
-	deleteCmd.Flags().BoolVarP(&keepResources, "keep-resources", "k", false, "do not delete Secrets and ConfigMaps create by CLI")
+	deleteCmd.Flags().BoolVarP(&keepResources, "keep-resources", "k", false, "do not delete Secrets and ConfigMaps created by CLI")
 }
 
 func deleteNetwork(ctx context.Context, cl client.Client, args []string) error {

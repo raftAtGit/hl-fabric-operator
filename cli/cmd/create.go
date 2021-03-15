@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -23,13 +24,13 @@ var createCmd = &cobra.Command{
 	Use:   "create FABRIC_NETWORK_FILE",
 	Args:  cobra.ExactArgs(1),
 	Short: "Create a new FabricNetwork",
-	Long: `Create a new FabricNetwork in K8S cluster:
+	Long: `Create a new FabricNetwork in Kubernetes cluster:
 
 Usage details and samples will be here`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, client := apiClient.NewClient()
 
-		if err := submitNetwork(ctx, client, args); err != nil {
+		if err := submitNewNetwork(ctx, client, args); err != nil {
 			fail("%v", err)
 		}
 	},
@@ -41,7 +42,7 @@ func init() {
 	createCmd.Flags().BoolVar(&overwrite, "overwrite", false, "overwrite existing Secrets and ConfigMaps")
 }
 
-func submitNetwork(ctx context.Context, cl client.Client, args []string) error {
+func submitNewNetwork(ctx context.Context, cl client.Client, args []string) error {
 	if err := checkOtherFabricNetworksExist(ctx, cl, namespace); err != nil {
 		return err
 	}
@@ -58,15 +59,23 @@ func submitNetwork(ctx context.Context, cl client.Client, args []string) error {
 
 	if network.Spec.Configtx.File != "" {
 		if err := createOrUpdateConfigtxSecret(ctx, cl, network, networkFile); err != nil {
-			return nil
+			return err
 		}
 		network.Spec.Configtx.File = ""
 		network.Spec.Configtx.Secret = "hlf-configtx.yaml"
 	}
 
+	if network.Spec.CryptoConfig.Folder != "" {
+		if err := createOrUpdateCryptoConfigSecret(ctx, cl, network, networkFile); err != nil {
+			return err
+		}
+		network.Spec.CryptoConfig.Folder = ""
+		network.Spec.CryptoConfig.Secret = "hlf-crypto-config"
+	}
+
 	if network.Spec.Chaincode.Folder != "" {
 		if err := createOrUpdateChaincodeConfigMaps(ctx, cl, network, networkFile); err != nil {
-			return nil
+			return err
 		}
 		network.Spec.Chaincode.Folder = ""
 	}
@@ -81,14 +90,17 @@ func submitNetwork(ctx context.Context, cl client.Client, args []string) error {
 }
 
 func validateNewNetwork(ctx context.Context, cl client.Client, network *v1alpha1.FabricNetwork) error {
+	if network.Spec.Topology.TLSEnabled && !network.Spec.Topology.UseActualDomains {
+		return errors.New("tlsEnabled is true but useActualDomains is false")
+	}
 	if network.Spec.Configtx.Secret == "" && network.Spec.Configtx.File == "" {
-		return errors.New("Either Configtx.Secret or Configtx.File is required")
+		return errors.New("Either configtx.secret or configtx.file is required")
 	}
 	if network.Spec.Configtx.Secret != "" && network.Spec.Configtx.File != "" {
-		return errors.New("Both Configtx.Secret and Configtx.File are provided, only either one is required")
+		return errors.New("Both configtx.secret and configtx.file are provided, only either one is required")
 	}
 	if network.Spec.Configtx.Secret != "" && network.Spec.Configtx.Secret != "hlf-configtx.yaml" {
-		return errors.New("Configtx.Secret should be named 'hlf-configtx.yaml'")
+		return errors.New("configtx.secret should be named 'hlf-configtx.yaml'")
 	}
 	if network.Spec.Configtx.Secret == "" && !overwrite {
 		exists, err := secretExists(ctx, cl, namespace, "hlf-configtx.yaml")
@@ -96,7 +108,7 @@ func validateNewNetwork(ctx context.Context, cl client.Client, network *v1alpha1
 			return err
 		}
 		if exists {
-			return fmt.Errorf("A K8S Secret with name hlf-configtx.yaml already exists in namespace %v. Provide --overwrite flag to force overwrite", namespace)
+			return fmt.Errorf("A Secret with name hlf-configtx.yaml already exists in namespace %v. Provide --overwrite flag to force overwrite", namespace)
 		}
 	}
 
@@ -106,7 +118,7 @@ func validateNewNetwork(ctx context.Context, cl client.Client, network *v1alpha1
 			return err
 		}
 		if !exists {
-			return fmt.Errorf("Configtx.Secret %v does not exist in namespace %v", network.Spec.Configtx.Secret, namespace)
+			return fmt.Errorf("configtx.secret %v does not exist in namespace %v", network.Spec.Configtx.Secret, namespace)
 		}
 	}
 
@@ -114,18 +126,18 @@ func validateNewNetwork(ctx context.Context, cl client.Client, network *v1alpha1
 		return errors.New("Genesis block is provided but CryptoConfig is not provided. Genesis block will not match generated certificates")
 	}
 	if network.Spec.Genesis.Secret != "" && network.Spec.Genesis.File != "" {
-		return errors.New("Both Genesis.Secret and Genesis.File are provided, at most one is allowed")
+		return errors.New("Both genesis.secret and genesis.file are provided, at most one is allowed")
 	}
 	if network.Spec.Genesis.Secret != "" {
 		if network.Spec.Genesis.Secret != "hlf-genesis.block" {
-			return errors.New("Genesis.Secret should be named 'hlf-genesis.block'")
+			return errors.New("genesis.secret should be named 'hlf-genesis.block'")
 		}
 		exists, err := secretExists(ctx, cl, namespace, network.Spec.Genesis.Secret)
 		if err != nil {
 			return err
 		}
 		if !exists {
-			return fmt.Errorf("Genesis.Secret %v does not exist in namespace %v", network.Spec.Genesis.Secret, namespace)
+			return fmt.Errorf("genesis.secret %v does not exist in namespace %v", network.Spec.Genesis.Secret, namespace)
 		}
 	}
 
@@ -152,21 +164,27 @@ func validateNewNetwork(ctx context.Context, cl client.Client, network *v1alpha1
 	}
 
 	if network.Spec.CryptoConfig.Secret != "" && network.Spec.CryptoConfig.Folder != "" {
-		return errors.New("Both CryptoConfig.Secret and CryptoConfig.Folder are provided, at most one is allowed")
-	}
-	if network.Spec.CryptoConfig.Folder != "" {
-		return errors.New("CryptoConfig.Folder is not implemented yet")
+		return errors.New("Both crypto-config.secret and crypto-config.folder are provided, at most one is allowed")
 	}
 	if network.Spec.CryptoConfig.Secret != "" {
 		if network.Spec.CryptoConfig.Secret != "hlf-crypto-config" {
-			return errors.New("CryptoConfig.Secret should be named 'hlf-crypto-config'")
+			return errors.New("crypto-config.secret should be named 'hlf-crypto-config'")
 		}
 		exists, err := secretExists(ctx, cl, namespace, network.Spec.CryptoConfig.Secret)
 		if err != nil {
 			return err
 		}
 		if !exists {
-			return fmt.Errorf("CryptoConfig.Secret %v does not exist in namespace %v", network.Spec.CryptoConfig.Secret, namespace)
+			return fmt.Errorf("crypto-config.secret %v does not exist in namespace %v", network.Spec.CryptoConfig.Secret, namespace)
+		}
+	}
+	if network.Spec.CryptoConfig.Folder != "" && !overwrite {
+		exists, err := secretExists(ctx, cl, namespace, "hlf-crypto-config")
+		if err != nil {
+			return err
+		}
+		if exists {
+			return fmt.Errorf("A Secret with name hlf-crypto-config already exists in namespace %v. Provide --overwrite flag to force overwrite", namespace)
 		}
 	}
 
@@ -296,5 +314,59 @@ func createOrUpdateChaincodeConfigMaps(ctx context.Context, cl client.Client, ne
 		}
 	}
 
+	return nil
+}
+
+func createOrUpdateCryptoConfigSecret(ctx context.Context, cl client.Client, network *v1alpha1.FabricNetwork, networkFile string) error {
+	var folder = network.Spec.CryptoConfig.Folder
+
+	if filepath.IsAbs(folder) {
+		debug("crypto-config.folder is absolute: %v", folder)
+	} else {
+		folder = filepath.Join(filepath.Dir(networkFile), folder)
+		debug("crypto-config is not absolute, merged path: %v", folder)
+	}
+
+	if _, err := os.Stat(folder); os.IsNotExist(err) {
+		return fmt.Errorf("crypto-config.folder %v does not exist", folder)
+	}
+
+	var buffer bytes.Buffer
+	if err := tarArchive(folder, "", &buffer); err != nil {
+		info("couldnt TAR archive crypto-config.folder %v", folder)
+		return err
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "hlf-crypto-config",
+			Namespace: namespace,
+			Labels: map[string]string{
+				"raft.io/fabric-operator-cli-created-for": network.Name,
+			},
+		},
+		Data: map[string][]byte{
+			"crypto-config": buffer.Bytes(),
+		},
+	}
+
+	exists, err := secretExists(ctx, cl, namespace, "hlf-crypto-config")
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		if err := cl.Update(ctx, secret); err != nil {
+			fmt.Printf("crypto-config secret update failed: %v \n", err)
+			return err
+		}
+		info("updated crypto-config Secret hlf-crypto-config")
+	} else {
+		if err := cl.Create(ctx, secret); err != nil {
+			fmt.Printf("crypto-config secret creation failed: %v \n", err)
+			return err
+		}
+		info("created crypto-config Secret hlf-crypto-config")
+	}
 	return nil
 }

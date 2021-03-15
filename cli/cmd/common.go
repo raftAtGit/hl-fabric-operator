@@ -66,6 +66,18 @@ func loadFabricNetwork(file string) (*v1alpha1.FabricNetwork, error) {
 	return &network, nil
 }
 
+func fabricNetworkExists(ctx context.Context, cl client.Client, namespace string, name string) (bool, *v1alpha1.FabricNetwork, error) {
+	network := &v1alpha1.FabricNetwork{}
+	err := cl.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, network)
+	if err != nil {
+		if apiErrors.IsNotFound(err) {
+			return false, nil, nil
+		}
+		return false, nil, err
+	}
+	return true, network, nil
+}
+
 func secretExists(ctx context.Context, cl client.Client, namespace string, name string) (bool, error) {
 	secret := &corev1.Secret{}
 	err := cl.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, secret)
@@ -110,12 +122,10 @@ func tarArchive(parentFolder string, childFolder string, buf io.Writer) error {
 			return err
 		}
 
-		// must provide real name
-		// (see https://golang.org/src/archive/tar/common.go?#L626)
-		// header.Name = filepath.ToSlash(file)
 		header.Name = strings.TrimPrefix(filepath.ToSlash(file), parentFolder+"/")
-		// hj, _ := yaml.Marshal(header)
-		// debug("header: %v", string(hj))
+		if header.Name == "" {
+			return nil
+		}
 
 		// write header
 		if err := tw.WriteHeader(header); err != nil {

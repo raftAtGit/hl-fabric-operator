@@ -17,7 +17,7 @@ import (
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List FabricNetworks",
-	Long:  `List FabricNetworks in K8S cluster`,
+	Long:  `List FabricNetworks in Kubernetes cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, client := apiClient.NewClient()
 		executeList(ctx, client, args)
@@ -57,14 +57,14 @@ func executeList(ctx context.Context, cl client.Client, args []string) {
 
 	table := uitable.New()
 	if allNamespaces {
-		table.AddRow("NAMESPACE", "NAME", "STATUS")
+		table.AddRow("NAMESPACE", "NAME", "STATUS", "MESSAGE", "WORKFLOW")
 		for _, n := range networkList.Items {
-			table.AddRow(n.Namespace, n.Name, n.Status.State)
+			table.AddRow(n.Namespace, n.Name, n.Status.State, n.Status.Message, n.Status.Workflow)
 		}
 	} else {
-		table.AddRow("NAME", "STATUS")
+		table.AddRow("NAME", "STATUS", "MESSAGE", "WORKFLOW")
 		for _, n := range networkList.Items {
-			table.AddRow(n.Name, n.Status.State)
+			table.AddRow(n.Name, n.Status.State, n.Status.Message, n.Status.Workflow)
 		}
 	}
 	if err := encodeTable(os.Stdout, table); err != nil {

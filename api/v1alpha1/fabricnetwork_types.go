@@ -23,6 +23,10 @@ type FabricNetworkSpec struct {
 	Topology Topology `json:"topology,omitempty"`
 	Network  Network  `json:"network,omitempty"`
 
+	// ForceState forces fabric operator to set the the state of FabricNetwork to given state and continue. Use with caution.
+	// +kubebuilder:validation:Enum=New;Ready;HelmChartInstalled;HelmChartNeedsUpdate;HelmChartNeedsDoubleUpdate;HelmChartReady;ChannelFlowCompleted;ChaincodeFlowCompleted;PeerOrgFlowCompleted
+	ForceState State `json:"forceState,omitempty"`
+
 	// Additional values passed to hlf-kube Helm chart
 	// +kubebuilder:pruning:PreserveUnknownFields
 	HlfKube runtime.RawExtension `json:"hlf-kube,omitempty"`
@@ -32,6 +36,9 @@ type FabricNetworkSpec struct {
 	// Additional values passed to chaincode-flow
 	// +kubebuilder:pruning:PreserveUnknownFields
 	ChaincodeFlow runtime.RawExtension `json:"chaincode-flow,omitempty"`
+	// Additional values passed to peer-org-flow
+	// +kubebuilder:pruning:PreserveUnknownFields
+	PeerOrgFlow runtime.RawExtension `json:"peer-org-flow,omitempty"`
 }
 
 // FabricNetworkStatus defines the observed state of FabricNetwork
@@ -39,23 +46,40 @@ type FabricNetworkStatus struct {
 	State    State  `json:"state,omitempty"`
 	Message  string `json:"message,omitempty"`
 	Workflow string `json:"workflow,omitempty"`
+	// +kubebuilder:validation:Enum=None;PeerOrgFlow
+	NextFlow NextFlow `json:"nextflow,omitempty"`
+
+	Chaincode  ChaincodeConfig `json:"chaincode,omitempty"`
+	Topology   Topology        `json:"topology,omitempty"`
+	Channels   []Channel       `json:"channels,omitempty"`
+	Chaincodes []Chaincode     `json:"chaincodes,omitempty"`
 }
 
 type State string
 
 const (
-	StateNew                    State = "New"
-	StateReady                  State = "Ready"
-	StateRejected               State = "Rejected"
-	StateInvalid                State = "Invalid"
-	StateFailed                 State = "Failed"
-	StateHelmChartInstalled     State = "HelmChartInstalled"
-	StateHelmChartNeedsUpdate   State = "HelmChartNeedsUpdate"
-	StateHelmChartReady         State = "HelmChartReady"
-	StateChannelFlowSubmitted   State = "ChannelFlowSubmitted"
-	StateChannelFlowCompleted   State = "ChannelFlowCompleted"
-	StateChaincodeFlowSubmitted State = "ChaincodeFlowSubmitted"
-	StateChaincodeFlowCompleted State = "ChaincodeFlowCompleted"
+	StateNew                        State = "New"
+	StateReady                      State = "Ready"
+	StateRejected                   State = "Rejected"
+	StateInvalid                    State = "Invalid"
+	StateFailed                     State = "Failed"
+	StateHelmChartInstalled         State = "HelmChartInstalled"
+	StateHelmChartNeedsUpdate       State = "HelmChartNeedsUpdate"
+	StateHelmChartNeedsDoubleUpdate State = "HelmChartNeedsDoubleUpdate"
+	StateHelmChartReady             State = "HelmChartReady"
+	StateChannelFlowSubmitted       State = "ChannelFlowSubmitted"
+	StateChannelFlowCompleted       State = "ChannelFlowCompleted"
+	StateChaincodeFlowSubmitted     State = "ChaincodeFlowSubmitted"
+	StateChaincodeFlowCompleted     State = "ChaincodeFlowCompleted"
+	StatePeerOrgFlowSubmitted       State = "PeerOrgFlowSubmitted"
+	StatePeerOrgFlowCompleted       State = "PeerOrgFlowCompleted"
+)
+
+type NextFlow string
+
+const (
+	NextFlowNone        NextFlow = "None"
+	NextFlowPeerOrgFlow NextFlow = "PeerOrgFlow"
 )
 
 // +kubebuilder:object:root=true
@@ -146,6 +170,42 @@ type Topology struct {
 	PeerOrgs []PeerOrg `json:"peerOrgs,omitempty"`
 }
 
+func (t Topology) OrdererOrgByName(name string) *OrdererOrg {
+	for _, o := range t.OrdererOrgs {
+		if o.Name == name {
+			return &o
+		}
+	}
+	return nil
+}
+
+func (t Topology) OrdererOrgNames() map[string]bool {
+	names := make(map[string]bool)
+
+	for _, o := range t.OrdererOrgs {
+		names[o.Name] = true
+	}
+	return names
+}
+
+func (t Topology) PeerOrgNames() map[string]bool {
+	names := make(map[string]bool)
+
+	for _, p := range t.PeerOrgs {
+		names[p.Name] = true
+	}
+	return names
+}
+
+func (t Topology) PeerOrgByName(name string) *PeerOrg {
+	for _, p := range t.PeerOrgs {
+		if p.Name == name {
+			return &p
+		}
+	}
+	return nil
+}
+
 // Orderer organization
 type OrdererOrg struct {
 	// Name of organization
@@ -170,8 +230,8 @@ type Network struct {
 	GenesisProfile  string `json:"genesisProfile,omitempty"`
 	SystemChannelID string `json:"systemChannelID,omitempty"`
 
-	Channels   []Channel   `json:"channels"`
-	Chaincodes []Chaincode `json:"chaincodes"`
+	Channels   []Channel   `json:"channels,omitempty"`
+	Chaincodes []Chaincode `json:"chaincodes,omitempty"`
 }
 
 type Channel struct {
