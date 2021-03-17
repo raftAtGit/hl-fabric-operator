@@ -115,6 +115,6 @@ spec:
           enabled: true
   channel-flow: {}
   chaincode-flow: {}
-  # peer-org-flow:
+  peer-org-flow:
   # backup-flow:
   # restore-flow:

@@ -281,6 +281,7 @@ func createOrUpdateChaincodeConfigMaps(ctx context.Context, cl client.Client, ne
 
 		var buffer bytes.Buffer
 		if err = tarArchive(chaincodeFolder, chaincode.Name, &buffer); err != nil {
+			info("couldnt TAR archive chaincode.folder %v", chaincodeFolder)
 			return err
 		}
 

@@ -1,7 +1,7 @@
 apiVersion: hyperledger.org/v1alpha1
 kind: FabricNetwork
 metadata:
-  name: scaled-raft-tls
+  name: simple-raft-tls
 spec:
 
   # source of the configtx.yaml file. either a Kubernetes Secret or a file.
@@ -46,11 +46,6 @@ spec:
     # Orderer and Peer organizations topology
     # crypto-config.yaml will be derived from this part
     ordererOrgs:
-      - name: Groeifabriek
-        domain: groeifabriek.nl
-        hosts:
-          - orderer0
-          - orderer1
       - name: Pivt
         domain: pivt.nl
         hosts:
@@ -58,13 +53,13 @@ spec:
     peerOrgs:
       - name: Karga
         domain: aptalkarga.tr
-        peerCount: 2
+        peerCount: 1
       - name: Nevergreen
         domain: nevergreen.nl
-        peerCount: 2
+        peerCount: 1
       - name: Atlantis
         domain: atlantis.com
-        peerCount: 2
+        peerCount: 1
 
   network:
     # used to create genesis block and by peer-org-flow to parse consortiums
@@ -114,7 +109,8 @@ spec:
         dind: 
           # use a side car docker in docker container? required for Kubernetes versions 1.19+ 
           enabled: true
-    # persistence should be enabled if network will be extended
+    # persistence should be enabled if network will be extended for networks which depends on hostAliases (useActualDomains=true)
+    # otherwise, when hostAliases are updated, pods will restart and lose all the data
       persistence:
         enabled: true
     orderer:

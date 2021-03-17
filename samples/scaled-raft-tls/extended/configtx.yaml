@@ -1,0 +1,499 @@
+
+---
+################################################################################
+#
+#   Section: Organizations
+#
+#   - This section defines the different organizational identities which will
+#   be referenced later in the configuration.
+#
+################################################################################
+Organizations:
+
+    - &Groeifabriek
+        Name: GroeifabriekMSP
+
+        # ID to load the MSP definition as
+        ID: GroeifabriekMSP
+
+        # MSPDir is the filesystem path which contains the MSP configuration
+        MSPDir: crypto-config/ordererOrganizations/groeifabriek.nl/msp
+
+        # Policies defines the set of policies at this level of the config tree
+        # For organization policies, their canonical path is usually
+        #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('GroeifabriekMSP.member')"
+            Writers:
+                Type: Signature
+                Rule: "OR('GroeifabriekMSP.member')"
+            Admins:
+                Type: Signature
+                Rule: "OR('GroeifabriekMSP.admin')"
+
+    - &Pivt
+        Name: PivtMSP
+
+        # ID to load the MSP definition as
+        ID: PivtMSP
+
+        MSPDir: crypto-config/ordererOrganizations/pivt.nl/msp
+
+        # Policies defines the set of policies at this level of the config tree
+        # For organization policies, their canonical path is usually
+        #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('PivtMSP.member')"
+            Writers:
+                Type: Signature
+                Rule: "OR('PivtMSP.member')"
+            Admins:
+                Type: Signature
+                Rule: "OR('PivtMSP.admin')"
+
+    - &Karga
+        Name: KargaMSP
+
+        # ID to load the MSP definition as
+        ID: KargaMSP
+
+        MSPDir: crypto-config/peerOrganizations/aptalkarga.tr/msp
+
+        # Policies defines the set of policies at this level of the config tree
+        # For organization policies, their canonical path is usually
+        #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('KargaMSP.admin', 'KargaMSP.peer', 'KargaMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('KargaMSP.admin', 'KargaMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('KargaMSP.admin')"
+
+        AnchorPeers:
+            # AnchorPeers defines the location of peers which can be used
+            # for cross org gossip communication.  Note, this value is only
+            # encoded in the genesis block in the Application section context
+            - Host: peer0.aptalkarga.tr
+              Port: 7051
+
+    - &Nevergreen
+        # DefaultOrg defines the organization which is used in the sampleconfig
+        # of the fabric.git development environment
+        Name: NevergreenMSP
+
+        # ID to load the MSP definition as
+        ID: NevergreenMSP
+
+        MSPDir: crypto-config/peerOrganizations/nevergreen.nl/msp
+
+        # Policies defines the set of policies at this level of the config tree
+        # For organization policies, their canonical path is usually
+        #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('NevergreenMSP.admin', 'NevergreenMSP.peer', 'NevergreenMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('NevergreenMSP.admin', 'NevergreenMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('NevergreenMSP.admin')"
+
+        AnchorPeers:
+            # AnchorPeers defines the location of peers which can be used
+            # for cross org gossip communication.  Note, this value is only
+            # encoded in the genesis block in the Application section context
+            - Host: peer0.nevergreen.nl
+              Port: 7051
+
+    - &Atlantis
+        # DefaultOrg defines the organization which is used in the sampleconfig
+        # of the fabric.git development environment
+        Name: AtlantisMSP
+
+        # ID to load the MSP definition as
+        ID: AtlantisMSP
+
+        MSPDir: crypto-config/peerOrganizations/atlantis.com/msp
+
+        # Policies defines the set of policies at this level of the config tree
+        # For organization policies, their canonical path is usually
+        #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('AtlantisMSP.admin', 'AtlantisMSP.peer', 'AtlantisMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('AtlantisMSP.admin', 'AtlantisMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('AtlantisMSP.admin')"
+
+        AnchorPeers:
+            # AnchorPeers defines the location of peers which can be used
+            # for cross org gossip communication.  Note, this value is only
+            # encoded in the genesis block in the Application section context
+            - Host: peer0.atlantis.com
+              Port: 7051
+
+    - &Valhalla
+        Name: ValhallaMSP
+
+        # ID to load the MSP definition as
+        ID: ValhallaMSP
+
+        MSPDir: crypto-config/peerOrganizations/valhalla.asgard/msp
+
+        # Policies defines the set of policies at this level of the config tree
+        # For organization policies, their canonical path is usually
+        #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('ValhallaMSP.admin', 'ValhallaMSP.peer', 'ValhallaMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('ValhallaMSP.admin', 'ValhallaMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('ValhallaMSP.admin')"
+
+        AnchorPeers:
+            - Host: peer0.valhalla.asgard
+              Port: 7051
+
+    - &Cimmeria
+        Name: CimmeriaMSP
+
+        # ID to load the MSP definition as
+        ID: CimmeriaMSP
+
+        MSPDir: crypto-config/peerOrganizations/cimmeria.hage/msp
+
+        # Policies defines the set of policies at this level of the config tree
+        # For organization policies, their canonical path is usually
+        #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('CimmeriaMSP.admin', 'CimmeriaMSP.peer', 'CimmeriaMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('CimmeriaMSP.admin', 'CimmeriaMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('CimmeriaMSP.admin')"
+
+        AnchorPeers:
+            - Host: peer0.cimmeria.hage
+              Port: 7051
+              
+
+################################################################################
+#
+#   SECTION: Capabilities
+#
+#   - This section defines the capabilities of fabric network. This is a new
+#   concept as of v1.1.0 and should not be utilized in mixed networks with
+#   v1.0.x peers and orderers.  Capabilities define features which must be
+#   present in a fabric binary for that binary to safely participate in the
+#   fabric network.  For instance, if a new MSP type is added, newer binaries
+#   might recognize and validate the signatures from this type, while older
+#   binaries without this support would be unable to validate those
+#   transactions.  This could lead to different versions of the fabric binaries
+#   having different world states.  Instead, defining a capability for a channel
+#   informs those binaries without this capability that they must cease
+#   processing transactions until they have been upgraded.  For v1.0.x if any
+#   capabilities are defined (including a map with all capabilities turned off)
+#   then the v1.0.x peer will deliberately crash.
+#
+################################################################################
+Capabilities:
+    # Channel capabilities apply to both the orderers and the peers and must be
+    # supported by both.
+    # Set the value of the capability to true to require it.
+    Channel: &ChannelCapabilities
+        # V1.4.2 for Channel is a catchall flag for behavior which has been
+        # determined to be desired for all orderers and peers running at the v1.4.2
+        # level, but which would be incompatible with orderers and peers from
+        # prior releases.
+        # Prior to enabling V1.4.2 channel capabilities, ensure that all
+        # orderers and peers on a channel are at v1.4.2 or later.
+        V1_4_2: true
+    # Orderer capabilities apply only to the orderers, and may be safely
+    # manipulated without concern for upgrading peers.  Set the value of the
+    # capability to true to require it.
+    Orderer: &OrdererCapabilities
+        # V1.1 for Order is a catchall flag for behavior which has been
+        # determined to be desired for all orderers running v1.0.x, but the
+        # modification of which  would cause incompatibilities.  Users should
+        # leave this flag set to true.
+        V1_4_2: true
+
+    # Application capabilities apply only to the peer network, and may be safely
+    # manipulated without concern for upgrading orderers.  Set the value of the
+    # capability to true to require it.
+    Application: &ApplicationCapabilities
+        # V1.2 for Application is a catchall flag for behavior which has been
+        # determined to be desired for all peers running v1.0.x, but the
+        # modification of which would cause incompatibilities.  Users should
+        # leave this flag set to true.
+        V1_4_2: true
+
+################################################################################
+#
+#   SECTION: Application
+#
+#   - This section defines the values to encode into a config transaction or
+#   genesis block for application related parameters
+#
+################################################################################
+Application: &ApplicationDefaults
+
+    # Organizations is the list of orgs which are defined as participants on
+    # the application side of the network
+    Organizations:
+
+    # Policies defines the set of policies at this level of the config tree
+    # For Application policies, their canonical path is
+    #   /Channel/Application/<PolicyName>
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+
+    # Capabilities describes the application level capabilities, see the
+    # dedicated Capabilities section elsewhere in this file for a full
+    # description
+    Capabilities:
+        <<: *ApplicationCapabilities
+
+################################################################################
+#
+#   SECTION: Orderer
+#
+#   - This section defines the values to encode into a config transaction or
+#   genesis block for orderer related parameters
+#
+################################################################################
+Orderer: &OrdererDefaults
+
+    # Orderer Type: The orderer implementation to start
+    # Available types are "solo", "kafka" and "etcdraft"
+    OrdererType: etcdraft
+
+    Addresses:
+        # - hlf-orderer--groeifabriek-0:7050
+        - orderer0.groeifabriek.nl:7050
+
+    # Batch Timeout: The amount of time to wait before creating a batch
+    BatchTimeout: 1s
+
+    # Batch Size: Controls the number of messages batched into a block
+    BatchSize:
+
+        # Max Message Count: The maximum number of messages to permit in a batch
+        MaxMessageCount: 5
+
+        # Absolute Max Bytes: The absolute maximum number of bytes allowed for
+        # the serialized messages in a batch.
+        AbsoluteMaxBytes: 98 MB
+
+        # Preferred Max Bytes: The preferred maximum number of bytes allowed for
+        # the serialized messages in a batch. A message larger than the preferred
+        # max bytes will result in a batch larger than preferred max bytes.
+        PreferredMaxBytes: 1024 KB
+
+    EtcdRaft:
+        Consenters:
+        - Host: orderer0.groeifabriek.nl
+          Port: 7050
+          ClientTLSCert: crypto-config/ordererOrganizations/groeifabriek.nl/orderers/orderer0.groeifabriek.nl/tls/server.crt
+          ServerTLSCert: crypto-config/ordererOrganizations/groeifabriek.nl/orderers/orderer0.groeifabriek.nl/tls/server.crt
+        - Host: orderer1.groeifabriek.nl
+          Port: 7050
+          ClientTLSCert: crypto-config/ordererOrganizations/groeifabriek.nl/orderers/orderer1.groeifabriek.nl/tls/server.crt
+          ServerTLSCert: crypto-config/ordererOrganizations/groeifabriek.nl/orderers/orderer1.groeifabriek.nl/tls/server.crt
+        - Host: orderer0.pivt.nl
+          Port: 7050
+          ClientTLSCert: crypto-config/ordererOrganizations/pivt.nl/orderers/orderer0.pivt.nl/tls/server.crt
+          ServerTLSCert: crypto-config/ordererOrganizations/pivt.nl/orderers/orderer0.pivt.nl/tls/server.crt
+
+        # Options to be specified for all the etcd/raft nodes. The values here
+        # are the defaults for all new channels and can be modified on a
+        # per-channel basis via configuration updates.
+        Options:
+            # TickInterval is the time interval between two Node.Tick invocations.
+            TickInterval: 500ms
+
+            # ElectionTick is the number of Node.Tick invocations that must pass
+            # between elections. That is, if a follower does not receive any
+            # message from the leader of current term before ElectionTick has
+            # elapsed, it will become candidate and start an election.
+            # ElectionTick must be greater than HeartbeatTick.
+            ElectionTick: 10
+
+            # HeartbeatTick is the number of Node.Tick invocations that must
+            # pass between heartbeats. That is, a leader sends heartbeat
+            # messages to maintain its leadership every HeartbeatTick ticks.
+            HeartbeatTick: 1
+
+            # MaxInflightBlocks limits the max number of in-flight append messages
+            # during optimistic replication phase.
+            MaxInflightBlocks: 5
+
+            # SnapshotIntervalSize defines number of bytes per which a snapshot is taken
+            SnapshotIntervalSize: 20 MB
+
+    # Organizations is the list of orgs which are defined as participants on
+    # the orderer side of the network
+    Organizations:
+
+    # Policies defines the set of policies at this level of the config tree
+    # For Orderer policies, their canonical path is
+    #   /Channel/Orderer/<PolicyName>
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        # BlockValidation specifies what signatures must be included in the block
+        # from the orderer for the peer to validate it.
+        BlockValidation:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+
+    # Capabilities describes the orderer level capabilities, see the
+    # dedicated Capabilities section elsewhere in this file for a full
+    # description
+    Capabilities:
+        <<: *OrdererCapabilities
+
+################################################################################
+#
+#   CHANNEL
+#
+#   This section defines the values to encode into a config transaction or
+#   genesis block for channel related parameters.
+#
+################################################################################
+Channel: &ChannelDefaults
+    # Policies defines the set of policies at this level of the config tree
+    # For Channel policies, their canonical path is
+    #   /Channel/<PolicyName>
+    Policies:
+        # Who may invoke the 'Deliver' API
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        # Who may invoke the 'Broadcast' API
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        # By default, who may modify elements at this config level
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+
+    # Capabilities describes the channel level capabilities, see the
+    # dedicated Capabilities section elsewhere in this file for a full
+    # description
+    Capabilities:
+        <<: *ChannelCapabilities
+
+################################################################################
+#
+#   Profile
+#
+#   - Different configuration profiles may be encoded here to be specified
+#   as parameters to the configtxgen tool
+#
+################################################################################
+Profiles:
+
+    OrdererGenesis:
+        Capabilities:
+            <<: *ChannelCapabilities
+        Orderer:
+            <<: *OrdererDefaults
+            Organizations:
+                - *Groeifabriek
+                - *Pivt
+            Capabilities:
+                <<: *OrdererCapabilities
+        Consortiums:
+            TheConsortium:
+                Organizations:
+                    - *Karga
+                    - *Nevergreen
+                    - *Atlantis
+                    - *Valhalla
+                    - *Cimmeria
+            SecondConsortium:
+                Organizations:
+                    - *Karga
+                    - *Valhalla
+                    - *Cimmeria
+                    
+    common:
+        Consortium: TheConsortium
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *Karga
+                - *Nevergreen
+                - *Atlantis
+            Capabilities:
+                <<: *ApplicationCapabilities
+
+    private-karga-atlantis:
+        Consortium: TheConsortium
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *Karga
+                - *Atlantis
+            Capabilities:
+                <<: *ApplicationCapabilities
+
+    private-valhalla-cimmeria:
+        Consortium: TheConsortium
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *Valhalla
+                - *Cimmeria
+            Capabilities:
+                <<: *ApplicationCapabilities
+
+    private-karga-valhalla-cimmeria:
+        Consortium: SecondConsortium
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *Karga
+                - *Valhalla
+                - *Cimmeria
+            Capabilities:
+                <<: *ApplicationCapabilities
