@@ -2,7 +2,8 @@ package client
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"os"
 
 	"github.com/raftAtGit/hl-fabric-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,9 +20,16 @@ func NewClient() (context.Context, runtimeClient.Client) {
 	utilRuntime.Must(clientgoScheme.AddToScheme(scheme))
 	utilRuntime.Must(v1alpha1.AddToScheme(scheme))
 
-	client, err := runtimeClient.New(config.GetConfigOrDie(), runtimeClient.Options{Scheme: scheme})
+	config, err := config.GetConfig()
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		fmt.Printf("Unable to get kubeconfig: %v \n", err)
+		os.Exit(1)
+	}
+
+	client, err := runtimeClient.New(config, runtimeClient.Options{Scheme: scheme})
+	if err != nil {
+		fmt.Printf("Failed to create client: %v \n", err)
+		os.Exit(1)
 	}
 
 	return context.Background(), client
