@@ -10,6 +10,7 @@ require (
 	github.com/gosuri/uitable v0.0.4
 	github.com/hyperledger/fabric v1.4.9
 	github.com/hyperledger/fabric-amcl v0.0.0-20200424173818-327c9e2cf77a // indirect
+	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
 	github.com/pkg/errors v0.9.1

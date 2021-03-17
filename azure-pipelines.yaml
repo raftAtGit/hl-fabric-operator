@@ -1,0 +1,105 @@
+# build numbering format
+name: $(Build.DefinitionName)_$(Build.BuildId)_$(Date:yyyy.MM.dd)
+
+trigger:
+  branches:
+    include:
+    - '*'
+  tags:
+    include:
+    - 'v*'
+
+resources:
+- repo: self
+
+variables:
+  tag: 'build.$(Build.BuildId)'
+  ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags/v') }}:
+    gitTag: $(Build.SourceBranchName)
+  ${{ if not(startsWith(variables['Build.SourceBranch'], 'refs/tags/v')) }}:
+    gitTag: 'build.$(Build.BuildId)'
+  # TODO: check also master branch
+  isRelease: $[startsWith(variables['Build.SourceBranch'], 'refs/tags/v')] 
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: Build controller Docker image
+  jobs:  
+  - job: Build
+    displayName: Build
+    steps:
+    - task: DownloadSecureFile@1
+      name: id_rsa
+      displayName: 'Download SSH key'
+      inputs:
+          secureFile: 'id_rsa'
+    - script: |
+        echo copying SSH key $(id_rsa.secureFilePath) to current directory
+        cp $(id_rsa.secureFilePath) ./
+      displayName: Copy SSH key
+    - task: Docker@2
+      displayName: Docker build
+      inputs:
+        command: build
+        repository: raft/rfabric
+        tags: |
+          $(tag)
+          $(gitTag)
+    - task: Docker@2
+      displayName: Docker push
+      condition: succeeded()
+      inputs:
+        command: push
+        containerRegistry: docker_hub_connection_raft
+        repository: raft/rfabric
+        tags: |
+          $(tag)
+          $(gitTag)
+
+  - job: Release
+    displayName: Release
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables.isRelease, true))
+    steps:
+    - script: |
+        mkdir -p $(Build.ArtifactStagingDirectory)/linux-amd64
+        mkdir -p $(Build.ArtifactStagingDirectory)/darwin-amd64
+        mkdir -p $(Build.ArtifactStagingDirectory)/windows-amd64
+      displayName: Prepare folders
+    - script: |
+        GOOS=linux GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/linux-amd64/ cli/rfabric.go
+        tar -czvf $(Build.ArtifactStagingDirectory)/linux-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/linux-amd64/ rfabric
+      displayName: go build cli linux
+    - script: |
+        GOOS=darwin GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/darwin-amd64/ cli/rfabric.go
+        tar -czvf $(Build.ArtifactStagingDirectory)/darwin-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/darwin-amd64/ rfabric
+      displayName: go build cli mac
+    - script: |
+        GOOS=windows GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/windows-amd64/ cli/rfabric.go
+        tar -czvf $(Build.ArtifactStagingDirectory)/windows-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/windows-amd64/ rfabric.exe
+      displayName: go build cli windows
+
+    - script: |
+        mkdir manifests
+        make install-manifest IMG=raft/rfabric:$(gitTag)
+        mv manifests/install.yaml $(Build.ArtifactStagingDirectory)
+
+        sed 's/{VERSION}/$(gitTag)/g' docs/release-notes-template.md > $(Build.ArtifactStagingDirectory)/release-notes.md
+      displayName: Make install manifest
+
+    - task: GithubRelease@0 
+      displayName: 'Create GitHub Release'      
+      inputs:
+        gitHubConnection: github_connection_raftAtGit
+        action: create
+        tagSource: manual
+        tag: $(gitTag)
+        releaseNotesFile: $(Build.ArtifactStagingDirectory)/release-notes.md
+        assets: |
+          $(Build.ArtifactStagingDirectory)/install.yaml
+          $(Build.ArtifactStagingDirectory)/linux-amd64.tar.gz
+          $(Build.ArtifactStagingDirectory)/darwin-amd64.tar.gz
+          $(Build.ArtifactStagingDirectory)/windows-amd64.tar.gz
