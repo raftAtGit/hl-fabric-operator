@@ -23,7 +23,7 @@ chmod +x rfabric
 mv rfabric /usr/local/bin/
 
 # Test installation
-rfabric --help
+rfabric version
 ```
 
 ## Mac
@@ -42,5 +42,5 @@ chmod +x rfabric
 mv rfabric /usr/local/bin/
 
 # Test installation
-rfabric --help
+rfabric version
 ```

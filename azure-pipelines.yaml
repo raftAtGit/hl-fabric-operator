@@ -20,6 +20,7 @@ variables:
     gitTag: 'build.$(Build.BuildId)'
   # TODO: check also master branch
   isRelease: $[startsWith(variables['Build.SourceBranch'], 'refs/tags/v')] 
+  cliPath: 'github.com/raftAtGit/hl-fabric-operator/cli'
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -58,30 +59,35 @@ stages:
         tags: |
           $(tag)
           $(gitTag)
-
-  - job: Release
-    displayName: Release
-    dependsOn: Build
-    condition: and(succeeded(), eq(variables.isRelease, true))
-    steps:
     - script: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux-amd64
         mkdir -p $(Build.ArtifactStagingDirectory)/darwin-amd64
         mkdir -p $(Build.ArtifactStagingDirectory)/windows-amd64
       displayName: Prepare folders
+    - task: GoTool@0
+      inputs:
+        version: '1.15.8'
     - script: |
-        GOOS=linux GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/linux-amd64/ cli/rfabric.go
+        GOOS=linux GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/linux-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/linux-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/linux-amd64/ rfabric
       displayName: go build cli linux
     - script: |
-        GOOS=darwin GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/darwin-amd64/ cli/rfabric.go
+        GOOS=darwin GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/darwin-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/darwin-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/darwin-amd64/ rfabric
       displayName: go build cli mac
     - script: |
-        GOOS=windows GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/windows-amd64/ cli/rfabric.go
+        GOOS=windows GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/windows-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/windows-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/windows-amd64/ rfabric.exe
       displayName: go build cli windows
-
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: $(Build.ArtifactStagingDirectory)
+        artifactName: outputs
+  - job: Release
+    displayName: Release
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables.isRelease, true))
+    steps:
     - script: |
         mkdir manifests
         make install-manifest IMG=raft/rfabric:$(gitTag)

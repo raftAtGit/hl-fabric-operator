@@ -16,6 +16,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.1.3
 	github.com/sykesm/zap-logfmt v0.0.4 // indirect
+	go.hein.dev/go-version v0.1.0
 	helm.sh/helm/v3 v3.4.2
 	k8s.io/api v0.19.6
 	k8s.io/apimachinery v0.19.6
