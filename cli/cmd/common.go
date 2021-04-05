@@ -104,7 +104,8 @@ func configMapExists(ctx context.Context, cl client.Client, namespace string, na
 
 // TAR archives given file or folder
 // modified from: https://gist.github.com/mimoo/25fc9716e0f1353791f5908f94d6e726
-func tarArchive(parentFolder string, childFolder string, buf io.Writer) error {
+// TAR archives given file or folder
+func compress(parentFolder string, childFolder string, buf io.Writer) error {
 	// tar > gzip > buf
 	zr := gzip.NewWriter(buf)
 	defer zr.Close()
@@ -144,4 +145,81 @@ func tarArchive(parentFolder string, childFolder string, buf io.Writer) error {
 		}
 		return nil
 	})
+}
+
+// check for path traversal and correct forward slashes
+func validRelPath(p string) bool {
+	if p == "" || strings.Contains(p, `\`) || strings.HasPrefix(p, "/") || strings.Contains(p, "../") {
+		return false
+	}
+	return true
+}
+
+func uncompress(src io.Reader, dst string) error {
+	// ungzip
+	zr, err := gzip.NewReader(src)
+	if err != nil {
+		return err
+	}
+	// untar
+	tr := tar.NewReader(zr)
+
+	// uncompress each element
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break // End of archive
+		}
+		if err != nil {
+			return err
+		}
+
+		// validate name against path traversal
+		if !validRelPath(header.Name) {
+			return fmt.Errorf("tar contained invalid name: %v", header.Name)
+		}
+
+		// add dst + re-format slashes according to system
+		target := filepath.Join(dst, header.Name)
+		// if no join is needed, replace with ToSlash:
+		// target = filepath.ToSlash(header.Name)
+
+		// check the type
+		switch header.Typeflag {
+
+		// if its a dir and it doesn't exist create it (with 0755 permission)
+		case tar.TypeDir:
+			if _, err := os.Stat(target); err != nil {
+				if err := os.MkdirAll(target, 0755); err != nil {
+					return err
+				}
+			}
+		// if it's a file create it (with same permission)
+		case tar.TypeReg:
+			fileToWrite, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if err != nil {
+				return err
+			}
+			// copy over contents
+			if _, err := io.Copy(fileToWrite, tr); err != nil {
+				return err
+			}
+			// manually close here after each file operation; defering would cause each file close
+			// to wait until all operations have completed.
+			fileToWrite.Close()
+		}
+	}
+	return nil
+}
+
+func createDirIfNotExists(dirPath string) error {
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		debug("output directory %v does not exist", outputDir)
+
+		if err = os.MkdirAll(outputDir, os.ModePerm); err != nil {
+			return err
+		}
+		debug("created output directory %v", outputDir)
+	}
+	return nil
 }

@@ -280,7 +280,7 @@ func createOrUpdateChaincodeConfigMaps(ctx context.Context, cl client.Client, ne
 		}
 
 		var buffer bytes.Buffer
-		if err = tarArchive(chaincodeFolder, chaincode.Name, &buffer); err != nil {
+		if err = compress(chaincodeFolder, chaincode.Name, &buffer); err != nil {
 			info("couldnt TAR archive chaincode.folder %v", chaincodeFolder)
 			return err
 		}
@@ -333,7 +333,7 @@ func createOrUpdateCryptoConfigSecret(ctx context.Context, cl client.Client, net
 	}
 
 	var buffer bytes.Buffer
-	if err := tarArchive(folder, "", &buffer); err != nil {
+	if err := compress(folder, "", &buffer); err != nil {
 		info("couldnt TAR archive crypto-config.folder %v", folder)
 		return err
 	}

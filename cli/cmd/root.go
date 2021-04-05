@@ -28,6 +28,12 @@ var (
 	allNamespaces = false
 	overwrite     = false
 	keepResources = false
+	shortened     = false
+	version       = "dev"
+	commit        = "none"
+	date          = "unknown"
+	outputFormat  = "json"
+	outputDir     string
 )
 
 // Execute adds all child commands to the root command and sets flags appropriately.

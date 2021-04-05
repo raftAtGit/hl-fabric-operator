@@ -27,4 +27,5 @@ testbin/*
 
 id_rsa
 samples/**/crypto-config/
-manifests/*
+manifests/
+output/
