@@ -112,13 +112,13 @@ spec:
     # persistence should be enabled if network will be extended for networks which depends on hostAliases (useActualDomains=true)
     # otherwise, when hostAliases are updated, pods will restart and lose all the data
       persistence:
-        enabled: true
+        enabled: false
     orderer:
       persistence:
-        enabled: true
+        enabled: false
     couchdb:
       persistence:
-        enabled: true    
+        enabled: false    
   channel-flow: {}
   chaincode-flow: {}
   peer-org-flow: {}

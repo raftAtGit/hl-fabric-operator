@@ -116,13 +116,13 @@ spec:
           enabled: true
     # persistence should be enabled if network will be extended
       persistence:
-        enabled: true
+        enabled: false
     orderer:
       persistence:
-        enabled: true
+        enabled: false
     couchdb:
       persistence:
-        enabled: true    
+        enabled: false    
   channel-flow: {}
   chaincode-flow: {}
   peer-org-flow: {}

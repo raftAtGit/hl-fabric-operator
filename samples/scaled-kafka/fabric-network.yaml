@@ -11,7 +11,7 @@ spec:
 
   chaincode:
     version: "1.0"
-    # language: node
+    language: node
     folder: ../chaincode # see CLI for usage
     # configMaps: implied list
 
@@ -115,6 +115,6 @@ spec:
           enabled: true
   channel-flow: {}
   chaincode-flow: {}
-  peer-org-flow:
+  peer-org-flow: {}
   # backup-flow:
   # restore-flow:
