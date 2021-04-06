@@ -65,6 +65,7 @@ stages:
         mkdir -p $(Build.ArtifactStagingDirectory)/windows-amd64
       displayName: Prepare folders
     - task: GoTool@0
+      displayName: go use version 1.15.8
       inputs:
         version: '1.15.8'
     - script: |
@@ -79,6 +80,13 @@ stages:
         GOOS=windows GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/windows-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/windows-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/windows-amd64/ rfabric.exe
       displayName: go build cli windows
+    - script: |
+        mkdir manifests
+        make install-manifest IMG=raft/rfabric:$(gitTag)
+        mv manifests/install.yaml $(Build.ArtifactStagingDirectory)
+
+        sed 's/{VERSION}/$(gitTag)/g' docs/release-notes-template.md > $(Build.ArtifactStagingDirectory)/release-notes.md
+      displayName: Make install manifest
     - task: PublishBuildArtifacts@1
       inputs:
         pathToPublish: $(Build.ArtifactStagingDirectory)
@@ -88,24 +96,20 @@ stages:
     dependsOn: Build
     condition: and(succeeded(), eq(variables.isRelease, true))
     steps:
-    - script: |
-        mkdir manifests
-        make install-manifest IMG=raft/rfabric:$(gitTag)
-        mv manifests/install.yaml $(Build.ArtifactStagingDirectory)
-
-        sed 's/{VERSION}/$(gitTag)/g' docs/release-notes-template.md > $(Build.ArtifactStagingDirectory)/release-notes.md
-      displayName: Make install manifest
-
+    - task: DownloadBuildArtifacts@0
+      displayName: Download artifacts
+      inputs:
+        artifactName: outputs
     - task: GithubRelease@0 
-      displayName: 'Create GitHub Release'      
+      displayName: Create GitHub Release
       inputs:
         gitHubConnection: github_connection_raftAtGit
         action: create
         tagSource: manual
         tag: $(gitTag)
-        releaseNotesFile: $(Build.ArtifactStagingDirectory)/release-notes.md
+        releaseNotesFile: $(System.ArtifactsDirectory)/outputs/release-notes.md
         assets: |
-          $(Build.ArtifactStagingDirectory)/install.yaml
-          $(Build.ArtifactStagingDirectory)/linux-amd64.tar.gz
-          $(Build.ArtifactStagingDirectory)/darwin-amd64.tar.gz
-          $(Build.ArtifactStagingDirectory)/windows-amd64.tar.gz
+          $(System.ArtifactsDirectory)/outputs/install.yaml
+          $(System.ArtifactsDirectory)/outputs/linux-amd64.tar.gz
+          $(System.ArtifactsDirectory)/outputs/darwin-amd64.tar.gz
+          $(System.ArtifactsDirectory)/outputs/windows-amd64.tar.gz
