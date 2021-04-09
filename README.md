@@ -503,11 +503,11 @@ So, make sure you delete the relevant `PersistentVolumeClaims` after deleting a 
 
 ## [Known issues](#known-issues)
 
-**Adding new peer organizations is not possible with Kubernetes versions 1.9+.**
+**Adding new peer organizations is not possible with Kubernetes versions 1.19+.**
 
-Kubernetes deprecated Docker in version 1.9, so Argo's default 
+Kubernetes deprecated Docker in version 1.19, so Argo's default 
 [Docker workflow executor](https://github.com/argoproj/argo-workflows/blob/master/docs/workflow-executors.md#docker-docker)
-is not an option with Kubernetes versions 1.9+. The other executors cannot distinguish between `stdout` and `stderr` 
+is not an option with Kubernetes versions 1.19+. The other executors cannot distinguish between `stdout` and `stderr` 
 which breaks the functionality of `peer-org-flow`. 
 See [this issue](https://github.com/argoproj/argo-workflows/issues/5408) for details.
 
