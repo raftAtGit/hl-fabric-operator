@@ -26,7 +26,7 @@ RUN chown -R root:root /root/.ssh
 RUN ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
 
 WORKDIR /workspace
-RUN git clone --branch feature/fabric-operator git@github.com:hyfen-nl/PIVT.git \
+RUN git clone git@github.com:hyfen-nl/PIVT.git \
     && cd PIVT \
     && git checkout b94a6a53e018fdb7cc5455fb3aa9d8b40a51d54d
 
