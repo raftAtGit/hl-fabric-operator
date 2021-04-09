@@ -427,8 +427,6 @@ Fabric Operator will start the channel Argo flow which will create the channel `
 To add new peer organizations, you need to configure Argo to use some artifactory. Minio is the simplest way. 
 Please make sure you can run an Argo provided [artifact sample](https://argoproj.github.io/argo-workflows/examples/#artifacts) before proceeding.
 
-As of 6 April 2021, adding new peer organizations is not possible in Kubernetes versions 19+. See [known issues](#known-issues) section for details.
-
 First launch the simple network and wait until it's ready:
 ```
 rfabric create samples/simple/fabric-network.yaml
@@ -503,16 +501,7 @@ So, make sure you delete the relevant `PersistentVolumeClaims` after deleting a 
 
 ## [Known issues](#known-issues)
 
-**Adding new peer organizations is not possible with Kubernetes versions 1.19+.**
-
-Kubernetes deprecated Docker in version 1.19, so Argo's default 
-[Docker workflow executor](https://github.com/argoproj/argo-workflows/blob/master/docs/workflow-executors.md#docker-docker)
-is not an option with Kubernetes versions 1.19+. The other executors cannot distinguish between `stdout` and `stderr` 
-which breaks the functionality of `peer-org-flow`. 
-See [this issue](https://github.com/argoproj/argo-workflows/issues/5408) for details.
-
-Hopefully this will be fixed with the [emissary executor](https://github.com/argoproj/argo-workflows/blob/master/docs/workflow-executors.md#emissary-emissary) 
-when Argo version `3.1` is released.
+None for now.
 
 ## [Conclusion](#conclusion)
 
