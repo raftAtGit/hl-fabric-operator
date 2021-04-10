@@ -26,7 +26,13 @@ var createCmd = &cobra.Command{
 	Short: "Create a new FabricNetwork",
 	Long: `Create a new FabricNetwork in Kubernetes cluster:
 
-Usage details and samples will be here`,
+Create command first makes a client side validation. 
+
+If there are references to local file system in the FabricNetwork CRD, 
+create command creates the relevant Secrets and ConfigMaps and replaces 
+local file system references with created Secrets and ConfigMaps 
+and submits the FabricNetwork to Kubernetes.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, client := apiClient.NewClient()
 
