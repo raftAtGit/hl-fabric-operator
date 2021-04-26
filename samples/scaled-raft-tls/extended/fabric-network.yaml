@@ -131,15 +131,15 @@ spec:
         dind: 
           # use a side car docker in docker container? required for Kubernetes versions 1.19+ 
           enabled: true
-    # persistence should be enabled if network will be extended
-      persistence:
-        enabled: true
-    orderer:
-      persistence:
-        enabled: true
-    couchdb:
-      persistence:
-        enabled: true    
+    # # persistence should be enabled if network will be extended
+    #   persistence:
+    #     enabled: true
+    # orderer:
+    #   persistence:
+    #     enabled: true
+    # couchdb:
+    #   persistence:
+    #     enabled: true    
   channel-flow: {}
   chaincode-flow: {}
   peer-org-flow: {}
