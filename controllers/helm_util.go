@@ -305,6 +305,8 @@ func (r *FabricNetworkReconciler) isHelmChartReady(ctx context.Context, network 
 		if sts.Annotations["meta.helm.sh/release-name"] != "hlf-kube" {
 			continue
 		}
+		// TODO when pods are restarting, this check is not sufficient.
+		// readyReplicas field is not updated immediately
 		if *sts.Spec.Replicas != sts.Status.ReadyReplicas {
 			r.Log.Info("StatefulSet is not ready", "name", sts.Name, "replicas", *sts.Spec.Replicas, "readyReplicas", sts.Status.ReadyReplicas)
 			return false, nil

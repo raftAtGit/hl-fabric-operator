@@ -32,15 +32,6 @@ stages:
   - job: Build
     displayName: Build
     steps:
-    - task: DownloadSecureFile@1
-      name: id_rsa
-      displayName: 'Download SSH key'
-      inputs:
-          secureFile: 'id_rsa'
-    - script: |
-        echo copying SSH key $(id_rsa.secureFilePath) to current directory
-        cp $(id_rsa.secureFilePath) ./
-      displayName: Copy SSH key
     - task: Docker@2
       displayName: Docker build
       inputs:

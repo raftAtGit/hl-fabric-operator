@@ -14,19 +14,8 @@ RUN curl https://get.helm.sh/helm-v3.5.2-linux-386.tar.gz --output helm.tar.gz \
 # clone PIVT repository
 FROM alpine/git as git
 
-# Make ssh dir
-RUN mkdir /root/.ssh/
-
-# Copy over private key, and set permissions
-ADD id_rsa /root/.ssh/id_rsa
-RUN chmod 700 /root/.ssh/id_rsa
-RUN chown -R root:root /root/.ssh
-
-# add github.com to known hosts
-RUN ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
-
 WORKDIR /workspace
-RUN git clone git@github.com:hyfen-nl/PIVT.git \
+RUN git clone https://github.com/hyfen-nl/PIVT.git \
     && cd PIVT \
     && git checkout b94a6a53e018fdb7cc5455fb3aa9d8b40a51d54d
 
