@@ -29,3 +29,5 @@ id_rsa
 samples/**/crypto-config/
 manifests/
 output/
+
+prepare-kind.sh
