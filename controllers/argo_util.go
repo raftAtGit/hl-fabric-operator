@@ -7,11 +7,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	wf "github.com/argoproj/argo/v3/pkg/apiclient/workflow"
-	wfv1 "github.com/argoproj/argo/v3/pkg/apis/workflow/v1alpha1"
+	wf "github.com/argoproj/argo-workflows/v3/pkg/apiclient/workflow"
+	wfv1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 
-	"github.com/argoproj/argo/v3/cmd/argo/commands/client"
-	argoCommon "github.com/argoproj/argo/v3/workflow/common"
+	"github.com/argoproj/argo-workflows/v3/cmd/argo/commands/client"
+	argoCommon "github.com/argoproj/argo-workflows/v3/workflow/common"
 	argoJson "github.com/argoproj/pkg/json"
 
 	"github.com/raftAtGit/hl-fabric-operator/api/v1alpha1"
