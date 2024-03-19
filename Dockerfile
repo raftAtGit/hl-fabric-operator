@@ -15,7 +15,7 @@ RUN curl https://get.helm.sh/helm-v3.5.2-linux-386.tar.gz --output helm.tar.gz \
 FROM alpine/git as git
 
 WORKDIR /workspace
-RUN git clone https://github.com/hyfen-nl/PIVT.git \
+RUN git clone https://github.com/raftAtGit/PIVT.git \
     && cd PIVT \
     && git checkout 62eb731a05eb2797a80cbbc10c56cee808089b8d
 

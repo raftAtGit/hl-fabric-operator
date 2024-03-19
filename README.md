@@ -36,14 +36,14 @@ This repository contains a [Kubernetes Operator](https://kubernetes.io/docs/conc
   * Install/Instantiate all chaincodes, or some of them, or upgrade them to newer version
 * Add new peer organizations to an already running network declaratively
 
-HL Fabric operator is a wrapper around our previous work [PIVT Helm charts](https://github.com/hyfen-nl/PIVT)
+HL Fabric operator is a wrapper around our previous work [PIVT Helm charts](https://github.com/raftAtGit/PIVT)
 and makes running and operating Hyperledger Fabric in Kubernetes even more easier.
 
 Not all functionality provided by PIVT Helm charts are covered, but HL Fabric operator is completely compatible with 
 PIVT Helm charts. This means any uncovered functionality can still be utilized by directly using PIVT Helm charts.
 
 ## [Who made this?](#who-made-this)
-This is made by the original author of [PIVT Helm charts](https://github.com/hyfen-nl/PIVT); Hakan Eryargi *(a.k.a. r a f t)*.
+This is made by the original author of [PIVT Helm charts](https://github.com/raftAtGit/PIVT); Hakan Eryargi *(a.k.a. r a f t)*.
 
 This work started as an experimental/PoC hobby project but turned out to be quite complete and functional.
 
@@ -150,7 +150,7 @@ Topology of the Fabric network managed by Fabric Operator. This part also contai
 ```
 #### Network
 This part defines how network is populated regarding channels and chaincodes. This part is identical to 
-[network.yaml](https://github.com/hyfen-nl/PIVT#networkyaml) in PIVT Helm charts.
+[network.yaml](https://github.com/raftAtGit/PIVT#networkyaml) in PIVT Helm charts.
 
 ```yaml
   network:
@@ -235,11 +235,11 @@ Below diagram shows the state machine of HL Fabric Operator:
 ![State Machine](https://raft-fabric-kube.s3-eu-west-1.amazonaws.com/images-operator/state-machine.png)
 
 ## [Network architecture](#network-architecture)
-Please refer to [Network Architecture](https://github.com/hyfen-nl/PIVT#network-architecture) section in the PIVT repo.
+Please refer to [Network Architecture](https://github.com/raftAtGit/PIVT#network-architecture) section in the PIVT repo.
 
 ## [Go over samples](#go-over-samples)
 
-Samples provided assumes CLI tool is used. All samples are based on the samples of [PIVT Helm charts](https://github.com/hyfen-nl/PIVT/tree/master/fabric-kube/samples).
+Samples provided assumes CLI tool is used. All samples are based on the samples of [PIVT Helm charts](https://github.com/raftAtGit/PIVT/tree/master/fabric-kube/samples).
 
 ### [Simple](#simple)
 __A solo orderer network with one peer per organization.__
@@ -259,9 +259,9 @@ created new FabricNetwork simple in namespace default
 So what happened? CLI noticed the references to configtx and chaincodes are local file system references, it created the relevant `Secret` and `ConfigMaps`, 
 updated the `FabricNetwork` to use the created Secret/ConfigMaps and submitted to Kubernetes.
 
-Fabric operator will now create a Helm release for [hlf-kube](https://github.com/hyfen-nl/PIVT/tree/master/fabric-kube/hlf-kube), wait until it's ready, 
-then will start [channel Argo flow](https://github.com/hyfen-nl/PIVT/tree/master/fabric-kube/channel-flow), wait until it's completed,
-then will start [chaincode Argo flow](https://github.com/hyfen-nl/PIVT/tree/master/fabric-kube/chaincode-flow), wait until it's completed,
+Fabric operator will now create a Helm release for [hlf-kube](https://github.com/raftAtGit/PIVT/tree/master/fabric-kube/hlf-kube), wait until it's ready, 
+then will start [channel Argo flow](https://github.com/raftAtGit/PIVT/tree/master/fabric-kube/channel-flow), wait until it's completed,
+then will start [chaincode Argo flow](https://github.com/raftAtGit/PIVT/tree/master/fabric-kube/chaincode-flow), wait until it's completed,
 then FabricNetwork will be ready.
 
 Watch the process by either:
@@ -320,10 +320,10 @@ ChaincodeFlowCompleted
 Ready
 ```
 This time Fabric operator noticed `useActualDomains` is set to true, so it first created the Helm release for 
-[hlf-kube](https://github.com/hyfen-nl/PIVT/tree/master/fabric-kube/hlf-kube), then collected `hostAliases` and then updated the 
+[hlf-kube](https://github.com/raftAtGit/PIVT/tree/master/fabric-kube/hlf-kube), then collected `hostAliases` and then updated the 
 Helm release with the `hostAliases`. The next steps remains the same. 
-It will start [channel Argo flow](https://github.com/hyfen-nl/PIVT/tree/master/fabric-kube/channel-flow), wait until it's completed,
-then will start [chaincode Argo flow](https://github.com/hyfen-nl/PIVT/tree/master/fabric-kube/chaincode-flow), wait until it's completed,
+It will start [channel Argo flow](https://github.com/raftAtGit/PIVT/tree/master/fabric-kube/channel-flow), wait until it's completed,
+then will start [chaincode Argo flow](https://github.com/raftAtGit/PIVT/tree/master/fabric-kube/chaincode-flow), wait until it's completed,
 then FabricNetwork will be ready.
 
 Congratulations! You now have a running HL Fabric network in Kubernetes with Raft orderer and TLS is enabled! Channels created, peer orgs joined to channels and chaincodes are installed and instantiated.
@@ -361,7 +361,7 @@ This will also launch Kafka and Zookeeper pods because of the setting passed to 
     hlf-kafka:
       enabled: true
 ```
-See hlf-kube Helm chart's [values.yaml](https://github.com/hyfen-nl/PIVT/blob/master/fabric-kube/hlf-kube/values.yaml#L174)
+See hlf-kube Helm chart's [values.yaml](https://github.com/raftAtGit/PIVT/blob/master/fabric-kube/hlf-kube/values.yaml#L174)
 for further configuration options of Kafka and Zookeper pods.
 
 Delete the FabricNetwork and all resources:
@@ -440,7 +440,7 @@ Fabric Operator will start the peer-org Argo flow which will add missing organiz
 and add missing organizations to existing channels as defined in `network` section. 
 Then channel Argo flow will be started and create missing channels. And finally chaincode Argo flow will be run.
 
-See the [adding new peer organizations](https://github.com/hyfen-nl/PIVT#adding-new-peer-organizations) section in PIVT Helm charts repo for details.
+See the [adding new peer organizations](https://github.com/raftAtGit/PIVT#adding-new-peer-organizations) section in PIVT Helm charts repo for details.
 
 __Note,__ if you are not running the majority of organizations and policy requires majority, adding new peer organizations will fail. 
 However, you can still use Fabric Operator to do the heavy lifting:
@@ -449,7 +449,7 @@ However, you can still use Fabric Operator to do the heavy lifting:
 * You can make Fabric Operator start from provided signed config updates
 * Or you can do both
 
-See the extending [cross cluster raft orderer network](https://github.com/hyfen-nl/PIVT#cross-cluster-raft-orderer-network) 
+See the extending [cross cluster raft orderer network](https://github.com/raftAtGit/PIVT#cross-cluster-raft-orderer-network) 
 sub section in PIVT Helm charts repo for details.
 
 You can extend the Raft and Kafka orderer networks in the same way. But **in Raft orderer networks, (more precisely if `useActualDomains` is true) `persistence` should be enabled**. 
@@ -472,7 +472,7 @@ When something goes wrong, logs are your best friend.
 If it's Argo workflow failing, you can check details with `argo logs <workflow-name> [pod-name]` command. 
 
 Fabric Operator __does not re-submit__ Argo workflows if they fail, since:
-* The retry mechanism is baked into Argo workflows, guarding the flows against temporary failures: [example](https://github.com/hyfen-nl/PIVT/blob/master/fabric-kube/chaincode-flow/values.yaml#L7)
+* The retry mechanism is baked into Argo workflows, guarding the flows against temporary failures: [example](https://github.com/raftAtGit/PIVT/blob/master/fabric-kube/chaincode-flow/values.yaml#L7)
 * Otherwise, if the underlying issue is not resolved, re-submitting the Argo workflow will just consume cluster resources for nothing
 
 Fix the issue, and force the Fabric Operator to continue by setting the `forceState` field in the `FabricNetwork`. Use with caution this option. See the [state-machine](#state-machine) for how to use this feature.
