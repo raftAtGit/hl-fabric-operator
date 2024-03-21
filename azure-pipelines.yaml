@@ -62,6 +62,14 @@ stages:
         version: '1.22.1'
     - script: |
         set -e # exit if any command fails
+        mkdir manifests
+        make install-manifest IMG=raft/rfabric:$(gitTag)
+        mv manifests/install.yaml $(Build.ArtifactStagingDirectory)
+
+        sed 's/{VERSION}/$(gitTag)/g' docs/release-notes-template.md > $(Build.ArtifactStagingDirectory)/release-notes.md
+      displayName: Make install manifest
+    - script: |
+        set -e # exit if any command fails
         GOOS=linux GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/linux-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/linux-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/linux-amd64/ rfabric
       displayName: go build cli linux
@@ -75,14 +83,6 @@ stages:
         GOOS=windows GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/windows-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/windows-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/windows-amd64/ rfabric.exe
       displayName: go build cli windows
-    - script: |
-        set -e # exit if any command fails
-        mkdir manifests
-        make install-manifest IMG=raft/rfabric:$(gitTag)
-        mv manifests/install.yaml $(Build.ArtifactStagingDirectory)
-
-        sed 's/{VERSION}/$(gitTag)/g' docs/release-notes-template.md > $(Build.ArtifactStagingDirectory)/release-notes.md
-      displayName: Make install manifest
     - task: PublishBuildArtifacts@1
       inputs:
         pathToPublish: $(Build.ArtifactStagingDirectory)
