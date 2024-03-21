@@ -122,6 +122,11 @@ spec:
         - name: private-karga-valhalla-cimmeria
           orgs: [Karga, Valhalla, Cimmeria]
           policy: OR('KargaMSP.member','ValhallaMSP.member','CimmeriaMSP.member')
+          
+  # additional values passed to all Argo workflows
+  argo:
+    # service account to run all Argo worklow pods with
+    serviceAccountName:
 
   # additional settings passed to relevant Helm charts
   # see each chart's values.yaml file for details
