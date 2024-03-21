@@ -55,6 +55,7 @@ stages:
         mkdir -p $(Build.ArtifactStagingDirectory)/darwin-amd64
         mkdir -p $(Build.ArtifactStagingDirectory)/windows-amd64
       displayName: Prepare folders
+      failOnStderr: 'true'
     - task: GoTool@0
       displayName: go use version 1.22.1
       inputs:
@@ -63,14 +64,17 @@ stages:
         GOOS=linux GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/linux-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/linux-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/linux-amd64/ rfabric
       displayName: go build cli linux
+      failOnStderr: 'true'
     - script: |
         GOOS=darwin GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/darwin-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/darwin-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/darwin-amd64/ rfabric
       displayName: go build cli mac
+      failOnStderr: 'true'
     - script: |
         GOOS=windows GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/windows-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/windows-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/windows-amd64/ rfabric.exe
       displayName: go build cli windows
+      failOnStderr: 'true'
     - script: |
         mkdir manifests
         make install-manifest IMG=raft/rfabric:$(gitTag)
@@ -78,6 +82,7 @@ stages:
 
         sed 's/{VERSION}/$(gitTag)/g' docs/release-notes-template.md > $(Build.ArtifactStagingDirectory)/release-notes.md
       displayName: Make install manifest
+      failOnStderr: 'true'
     - task: PublishBuildArtifacts@1
       inputs:
         pathToPublish: $(Build.ArtifactStagingDirectory)
