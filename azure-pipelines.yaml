@@ -51,6 +51,7 @@ stages:
           $(tag)
           $(gitTag)
     - script: |
+        set -e # exit if any command fails
         mkdir -p $(Build.ArtifactStagingDirectory)/linux-amd64
         mkdir -p $(Build.ArtifactStagingDirectory)/darwin-amd64
         mkdir -p $(Build.ArtifactStagingDirectory)/windows-amd64
@@ -60,18 +61,22 @@ stages:
       inputs:
         version: '1.22.1'
     - script: |
+        set -e # exit if any command fails
         GOOS=linux GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/linux-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/linux-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/linux-amd64/ rfabric
       displayName: go build cli linux
     - script: |
+        set -e # exit if any command fails
         GOOS=darwin GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/darwin-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/darwin-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/darwin-amd64/ rfabric
       displayName: go build cli mac
     - script: |
+        set -e # exit if any command fails
         GOOS=windows GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/windows-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/windows-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/windows-amd64/ rfabric.exe
       displayName: go build cli windows
     - script: |
+        set -e # exit if any command fails
         mkdir manifests
         make install-manifest IMG=raft/rfabric:$(gitTag)
         mv manifests/install.yaml $(Build.ArtifactStagingDirectory)
