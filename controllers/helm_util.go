@@ -33,6 +33,11 @@ type networkContainer struct {
 	Network v1alpha1.Network `json:"network,omitempty"`
 }
 
+// Struct to write the Argo to a file
+type argoContainer struct {
+	Argo v1alpha1.Argo `json:"argo,omitempty"`
+}
+
 func (r *FabricNetworkReconciler) prepareHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork) error {
 	networkDir := getNetworkDir(network)
 
@@ -231,7 +236,7 @@ func loadHelmChart(network *v1alpha1.FabricNetwork) (*hchart.Chart, error) {
 
 func (r *FabricNetworkReconciler) renderChannelFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
 	chartDir := settings.PivtDir + "/fabric-kube/channel-flow/"
-	return r.renderHelmChart(ctx, network, chartDir, []string{"channel-flow-values.yaml"}, nil)
+	return r.renderHelmChart(ctx, network, chartDir, []string{"shared-workflow-values.yaml", "channel-flow-values.yaml"}, nil)
 }
 
 func (r *FabricNetworkReconciler) renderChaincodeFlow(ctx context.Context, network *v1alpha1.FabricNetwork, includeChaincodes []string) (string, error) {
@@ -245,12 +250,12 @@ func (r *FabricNetworkReconciler) renderChaincodeFlow(ctx context.Context, netwo
 		extraValues = append(extraValues, "flow.chaincode.include={"+strings.Join(includeChaincodes, ",")+"}")
 	}
 
-	return r.renderHelmChart(ctx, network, chartDir, []string{"chaincode-flow-values.yaml"}, extraValues)
+	return r.renderHelmChart(ctx, network, chartDir, []string{"shared-workflow-values.yaml", "chaincode-flow-values.yaml"}, extraValues)
 }
 
 func (r *FabricNetworkReconciler) renderPeerOrgFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
 	chartDir := settings.PivtDir + "/fabric-kube/peer-org-flow/"
-	return r.renderHelmChart(ctx, network, chartDir, []string{"peer-org-flow-values.yaml", "configtx.yaml"}, nil)
+	return r.renderHelmChart(ctx, network, chartDir, []string{"shared-workflow-values.yaml", "peer-org-flow-values.yaml", "configtx.yaml"}, nil)
 }
 
 func (r *FabricNetworkReconciler) renderHelmChart(ctx context.Context, network *v1alpha1.FabricNetwork,
@@ -407,6 +412,9 @@ func (r *FabricNetworkReconciler) createValuesFiles(ctx context.Context, network
 	if err := r.createOperatorValuesFile(ctx, network); err != nil {
 		return err
 	}
+	if err := r.createSharedWorkflowValuesFile(ctx, network); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -454,6 +462,19 @@ func (r *FabricNetworkReconciler) createValuesFile(contents []byte, file string)
 		return err
 	}
 	r.Log.Info("Wrote values to file", "values", string(contents), "file", file)
+
+	return nil
+}
+
+func (r *FabricNetworkReconciler) createSharedWorkflowValuesFile(ctx context.Context, network *v1alpha1.FabricNetwork) error {
+	networkDir := getNetworkDir(network)
+
+	argoContainer := argoContainer{Argo: network.Spec.Argo}
+	file := networkDir + "/shared-workflow-values.yaml"
+	if err := writeYamlToFile(argoContainer, file); err != nil {
+		return err
+	}
+	r.Log.Info("Wrote shared workflow values to file", "file", file, "argo", argoContainer)
 
 	return nil
 }

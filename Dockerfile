@@ -17,7 +17,7 @@ FROM alpine/git as git
 WORKDIR /workspace
 RUN git clone https://github.com/raftAtGit/PIVT.git \
     && cd PIVT \
-    && git checkout 62eb731a05eb2797a80cbbc10c56cee808089b8d
+    && git checkout a10c7bd4e628ef81d50508a84b5deaaf103d8e29
 
 # Install hlf-kube Helm chart dependencies (Kafka)
 COPY --from=curl /helm/linux-386/helm /usr/local/bin/

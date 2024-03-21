@@ -38,6 +38,13 @@ spec:
           spec:
             description: FabricNetworkSpec defines the desired state of FabricNetwork
             properties:
+              argo:
+                description: Additional values passed to all Argo workflows
+                properties:
+                  serviceAccountName:
+                    description: Service account to run all Argo worklow pods with.
+                    type: string
+                type: object
               chaincode:
                 description: ChaincodeConfig is the global chaincode settings and
                   source of chaincode sources. Source is either a folder or an implied

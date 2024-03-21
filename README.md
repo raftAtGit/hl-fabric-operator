@@ -192,6 +192,13 @@ This part defines how network is populated regarding channels and chaincodes. Th
           orgs: [Karga, Atlantis]
           policy: OR('KargaMSP.member','AtlantisMSP.member')
 ```
+#### Argo settings
+This part contains additional settings passed to all Argo workflows.
+```yaml
+  argo:
+    # service account to run all Argo worklow pods with
+    serviceAccountName:
+```
 #### Additional settings
 This part contains additional settings passed to relevant PIVT Helm charts. See each chart's `values.yaml` file for details.
 ```yaml

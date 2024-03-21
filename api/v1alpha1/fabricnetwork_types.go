@@ -27,6 +27,9 @@ type FabricNetworkSpec struct {
 	// +kubebuilder:validation:Enum=New;Ready;HelmChartInstalled;HelmChartNeedsUpdate;HelmChartNeedsDoubleUpdate;HelmChartReady;ChannelFlowCompleted;ChaincodeFlowCompleted;PeerOrgFlowCompleted
 	ForceState State `json:"forceState,omitempty"`
 
+	// Additional values passed to all Argo workflows
+	Argo Argo `json:"argo,omitempty"`
+
 	// Additional values passed to hlf-kube Helm chart
 	// +kubebuilder:pruning:PreserveUnknownFields
 	HlfKube runtime.RawExtension `json:"hlf-kube,omitempty"`
@@ -263,6 +266,11 @@ type CcChannel struct {
 	Orgs []string `json:"orgs"`
 	// Chaincode policy
 	Policy string `json:"policy"`
+}
+
+type Argo struct {
+	// Service account to run all Argo worklow pods with.
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 func init() {
