@@ -32,7 +32,7 @@ func (r *FabricNetworkReconciler) startChannelFlow(ctx context.Context, network 
 		return "", err
 	}
 
-	return r.submitWorkflow(network, wfManifest)
+	return r.submitWorkflow(ctx, network, wfManifest)
 }
 
 // empty array for includeChaincodes means, all chaincodes
@@ -43,7 +43,7 @@ func (r *FabricNetworkReconciler) startChaincodeFlow(ctx context.Context, networ
 		return "", err
 	}
 
-	return r.submitWorkflow(network, wfManifest)
+	return r.submitWorkflow(ctx, network, wfManifest)
 }
 
 func (r *FabricNetworkReconciler) startPeerOrgFlow(ctx context.Context, network *v1alpha1.FabricNetwork) (string, error) {
@@ -53,10 +53,10 @@ func (r *FabricNetworkReconciler) startPeerOrgFlow(ctx context.Context, network 
 		return "", err
 	}
 
-	return r.submitWorkflow(network, wfManifest)
+	return r.submitWorkflow(ctx, network, wfManifest)
 }
 
-func (r *FabricNetworkReconciler) submitWorkflow(network *v1alpha1.FabricNetwork, wfManifest string) (string, error) {
+func (r *FabricNetworkReconciler) submitWorkflow(ctx context.Context, network *v1alpha1.FabricNetwork, wfManifest string) (string, error) {
 
 	wfs, err := r.unmarshalWorkflows([]byte(wfManifest), true)
 	if err != nil {
@@ -72,7 +72,7 @@ func (r *FabricNetworkReconciler) submitWorkflow(network *v1alpha1.FabricNetwork
 	}
 	wfs[0].Labels["raft.io/fabric-operator-created-for"] = network.Name
 
-	ctx, apiClient := client.NewAPIClient()
+	ctx, apiClient := client.NewAPIClient(ctx)
 	serviceClient := apiClient.NewWorkflowServiceClient()
 
 	options := &metav1.CreateOptions{}
@@ -93,7 +93,7 @@ func (r *FabricNetworkReconciler) submitWorkflow(network *v1alpha1.FabricNetwork
 }
 
 func (r *FabricNetworkReconciler) getWorkflowStatus(ctx context.Context, network *v1alpha1.FabricNetwork, wfName string) (wfStatus, error) {
-	ctx, apiClient := client.NewAPIClient()
+	ctx, apiClient := client.NewAPIClient(ctx)
 	serviceClient := apiClient.NewWorkflowServiceClient()
 
 	workflow, err := serviceClient.GetWorkflow(ctx, &wf.WorkflowGetRequest{

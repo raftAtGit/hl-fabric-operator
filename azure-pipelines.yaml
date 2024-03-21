@@ -56,9 +56,9 @@ stages:
         mkdir -p $(Build.ArtifactStagingDirectory)/windows-amd64
       displayName: Prepare folders
     - task: GoTool@0
-      displayName: go use version 1.18
+      displayName: go use version 1.22.1
       inputs:
-        version: '1.18'
+        version: '1.22.1'
     - script: |
         GOOS=linux GOARCH=amd64 go build -o $(Build.ArtifactStagingDirectory)/linux-amd64/ -ldflags "-X '$(cliPath)/cmd.version=$(gitTag)' -X '$(cliPath)/cmd.commit=$(Build.SourceVersion)' -X '$(cliPath)/cmd.date=$(date +%F)'" cli/rfabric.go
         tar -czvf $(Build.ArtifactStagingDirectory)/linux-amd64.tar.gz -C $(Build.ArtifactStagingDirectory)/linux-amd64/ rfabric
